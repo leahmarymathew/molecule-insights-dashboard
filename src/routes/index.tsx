@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Atom, FlaskConical, Target, TrendingUp, Bell, Search } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Atom, FlaskConical, Layers, Database, Bell, Search } from "lucide-react";
 import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/dashboard/AppSidebar";
 import { KpiCard } from "@/components/dashboard/KpiCard";
@@ -8,6 +9,7 @@ import { ActivityChart } from "@/components/dashboard/ActivityChart";
 import { ResultsTable } from "@/components/dashboard/ResultsTable";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { summarize, type DatasetRow } from "@/lib/parseDataset";
 
 export const Route = createFileRoute("/")({
   component: Dashboard,
@@ -20,6 +22,9 @@ export const Route = createFileRoute("/")({
 });
 
 function Dashboard() {
+  const [rows, setRows] = useState<DatasetRow[]>([]);
+  const summary = useMemo(() => summarize(rows), [rows]);
+
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full bg-background text-foreground">
@@ -47,10 +52,10 @@ function Dashboard() {
             </div>
 
             <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              <KpiCard label="Compounds Screened" value="12,847" change={12.4} icon={Atom} hint="vs last week" />
-              <KpiCard label="Active Hits" value="284" change={8.1} icon={Target} hint="vs last week" />
-              <KpiCard label="Avg. Binding Affinity" value="42.7 nM" change={-3.2} icon={TrendingUp} hint="lower is better" />
-              <KpiCard label="Assays Running" value="36" change={5.0} icon={FlaskConical} hint="vs last week" />
+              <KpiCard label="Total Rows" value={summary.totalRows.toLocaleString()} change={0} icon={Database} hint="parsed records" />
+              <KpiCard label="Total Molecules" value={summary.totalMolecules.toLocaleString()} change={0} icon={Atom} hint="unique molecules" />
+              <KpiCard label="International Products" value={summary.totalProducts.toLocaleString()} change={0} icon={Layers} hint="unique products" />
+              <KpiCard label="Status" value={rows.length ? "Ready" : "Idle"} change={0} icon={FlaskConical} hint={rows.length ? "data loaded" : "awaiting upload"} />
             </section>
 
             <section className="grid gap-4 lg:grid-cols-3">
@@ -58,12 +63,12 @@ function Dashboard() {
                 <ActivityChart />
               </div>
               <div>
-                <UploadSection />
+                <UploadSection onParsed={setRows} />
               </div>
             </section>
 
             <section>
-              <ResultsTable />
+              <ResultsTable rows={rows} />
             </section>
           </main>
         </SidebarInset>
