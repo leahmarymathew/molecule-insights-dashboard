@@ -10,6 +10,7 @@ import { ResultsTable } from "@/components/dashboard/ResultsTable";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { summarize, type DatasetRow } from "@/lib/parseDataset";
+import { analyzeMolecules } from "@/lib/analyzeMolecules";
 
 export const Route = createFileRoute("/")({
   component: Dashboard,
@@ -24,6 +25,7 @@ export const Route = createFileRoute("/")({
 function Dashboard() {
   const [rows, setRows] = useState<DatasetRow[]>([]);
   const summary = useMemo(() => summarize(rows), [rows]);
+  const analytics = useMemo(() => analyzeMolecules(rows), [rows]);
 
   return (
     <SidebarProvider>
@@ -68,7 +70,7 @@ function Dashboard() {
             </section>
 
             <section>
-              <ResultsTable rows={rows} />
+              <ResultsTable data={analytics} />
             </section>
           </main>
         </SidebarInset>
