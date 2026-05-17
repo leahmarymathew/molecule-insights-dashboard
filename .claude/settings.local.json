@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Remove-Item -Recurse -Force \"C:\\\\Users\\\\Leah\\\\Documents\\\\git\\\\molecule\\\\molecule-insights-dashboard\\\\src\\\\components\\\\dashboard\" -ErrorAction SilentlyContinue)",
+      "Bash(Remove-Item -Force \"C:\\\\Users\\\\Leah\\\\Documents\\\\git\\\\molecule\\\\molecule-insights-dashboard\\\\src\\\\components\\\\ChartPanel.tsx\" -ErrorAction SilentlyContinue)",
+      "Bash(Remove-Item -Force \"C:\\\\Users\\\\Leah\\\\Documents\\\\git\\\\molecule\\\\molecule-insights-dashboard\\\\src\\\\components\\\\Sidebar.tsx\" -ErrorAction SilentlyContinue)",
+      "Bash(Write-Output \"Done\")",
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\Leah\\\\Documents\\\\git\\\\molecule\\\\molecule-insights-dashboard\\\\src\" -Recurse -File | Where-Object { $_.Extension -in \".tsx\", \".ts\" } | Select-Object -ExpandProperty FullName | Sort-Object)",
+      "Bash(curl -s http://127.0.0.1:8000/health)",
+      "PowerShell(& \"C:\\\\Users\\\\Leah\\\\Documents\\\\git\\\\molecule\\\\molecule-insights-dashboard\\\\backend\\\\venv\\\\bin\\\\python.exe\" -c \"import fastapi, openpyxl, uvicorn; print\\('deps ok'\\)\" 2>&1)",
+      "PowerShell(& \"C:\\\\Users\\\\Leah\\\\Documents\\\\git\\\\molecule\\\\molecule-insights-dashboard\\\\backend\\\\venv\\\\bin\\\\python.exe\" -m pip install -r \"C:\\\\Users\\\\Leah\\\\Documents\\\\git\\\\molecule\\\\molecule-insights-dashboard\\\\backend\\\\requirements.txt\" 2>&1)",
+      "PowerShell(& \"C:\\\\Users\\\\Leah\\\\Documents\\\\git\\\\molecule\\\\molecule-insights-dashboard\\\\backend\\\\venv\\\\bin\\\\python.exe\" -m pip install fastapi openpyxl python-multipart uvicorn 2>&1)",
+      "PowerShell(& \"C:\\\\Users\\\\Leah\\\\Documents\\\\git\\\\molecule\\\\molecule-insights-dashboard\\\\backend\\\\venv\\\\bin\\\\python.exe\" -c \"import sys, platform; print\\(sys.version\\); print\\(platform.python_implementation\\(\\)\\); print\\(sys.implementation.cache_tag\\); print\\(platform.architecture\\(\\)\\); print\\(sys.platform\\)\" 2>&1)",
+      "PowerShell(& \"C:\\\\Users\\\\Leah\\\\AppData\\\\Local\\\\Python\\\\bin\\\\python.exe\" --version 2>&1; & \"C:\\\\Users\\\\Leah\\\\AppData\\\\Local\\\\Python\\\\bin\\\\python.exe\" -c \"import sys; print\\(sys.platform, sys._base_executable\\)\" 2>&1)",
+      "PowerShell(py *)",
+      "PowerShell(& \"C:\\\\Users\\\\Leah\\\\Documents\\\\git\\\\molecule\\\\molecule-insights-dashboard\\\\backend\\\\venv\\\\Scripts\\\\python.exe\" -m pip install fastapi uvicorn openpyxl python-multipart 2>&1)",
+      "PowerShell(& \"C:\\\\Users\\\\Leah\\\\Documents\\\\git\\\\molecule\\\\molecule-insights-dashboard\\\\backend\\\\venv\\\\Scripts\\\\python.exe\" -c \"import fastapi, openpyxl, uvicorn; print\\('All deps OK'\\)\" 2>&1)",
+      "PowerShell(Start-Process -FilePath \"C:\\\\Users\\\\Leah\\\\Documents\\\\git\\\\molecule\\\\molecule-insights-dashboard\\\\backend\\\\venv\\\\Scripts\\\\python.exe\" -ArgumentList \"-m\", \"uvicorn\", \"main:app\", \"--host\", \"0.0.0.0\", \"--port\", \"8000\" -WorkingDirectory \"C:\\\\Users\\\\Leah\\\\Documents\\\\git\\\\molecule\\\\molecule-insights-dashboard\\\\backend\" -WindowStyle Normal)",
+      "PowerShell(Start-Sleep -Seconds 3; try { $r = Invoke-WebRequest -Uri \"http://127.0.0.1:8000/health\" -UseBasicParsing -TimeoutSec 5; $r.Content } catch { \"NOT_REACHABLE: $_\" })",
+      "Bash(npm run *)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Leah\\\\Documents\\\\git\\\\molecule\\\\molecule-insights-dashboard\" -MaxDepth 1 -Filter \"*.md\" -File)",
+      "Bash(Select-Object Name)",
+      "Bash(grep -E '\\\\.md$')",
+      "Bash(xargs grep -l \"server\\\\|start\")"
+    ]
+  }
+}
