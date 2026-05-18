@@ -35,7 +35,7 @@ export function UploadSection({ onUploadComplete, currentSummary }: UploadSectio
         onUploadComplete(result);
       } catch (e) {
         setError(
-          e instanceof Error ? e.message : "Upload failed. Is the backend running on port 8000?",
+          e instanceof Error ? e.message : "Upload failed. Check that the backend is running.",
         );
       } finally {
         setLoading(false);
