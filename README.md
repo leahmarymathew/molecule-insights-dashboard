@@ -40,7 +40,7 @@ You can copy from `.env.example`.
 ### 1) Start backend
 
 ```bash
-cd /home/runner/work/molecule-insights-dashboard/molecule-insights-dashboard/backend
+cd backend
 python -m venv venv
 source venv/bin/activate  # On Windows PowerShell: .\venv\Scripts\Activate.ps1
 pip install -r requirements.txt
@@ -52,7 +52,6 @@ Backend health check: `http://127.0.0.1:8000/health`
 ### 2) Start frontend
 
 ```bash
-cd /home/runner/work/molecule-insights-dashboard/molecule-insights-dashboard
 npm ci
 npm run dev
 ```
@@ -76,8 +75,7 @@ The uploaded Excel file should include fields used by analytics, including:
 
 ## Frontend Commands
 
-Run from:
-`/home/runner/work/molecule-insights-dashboard/molecule-insights-dashboard`
+Run from repository root:
 
 ```bash
 npm run dev
@@ -95,5 +93,5 @@ npm run format
 
 ## Additional Documentation
 
-- `/home/runner/work/molecule-insights-dashboard/molecule-insights-dashboard/ARCHITECTURE.md`
-- `/home/runner/work/molecule-insights-dashboard/molecule-insights-dashboard/DEPLOYMENT.md`
+- `ARCHITECTURE.md`
+- `DEPLOYMENT.md`
