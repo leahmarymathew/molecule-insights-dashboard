@@ -22,7 +22,7 @@ Users upload an Excel file, the FastAPI backend computes molecule-level metrics,
 
 ## Prerequisites
 
-- Node.js and npm
+- Node.js 22.12+ and npm
 - Python 3.10+
 
 ## Environment Variables
@@ -48,6 +48,8 @@ source venv/bin/activate
 # .\venv\Scripts\Activate.ps1
 # Windows Command Prompt
 # .\venv\Scripts\activate.bat
+# If PowerShell blocks activation, run:
+# Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 pip install -r requirements.txt
 python -m uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
