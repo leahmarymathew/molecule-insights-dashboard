@@ -42,7 +42,12 @@ You can copy from `.env.example`.
 ```bash
 cd backend
 python -m venv venv
-source venv/bin/activate  # On Windows PowerShell: .\venv\Scripts\Activate.ps1
+# macOS/Linux
+source venv/bin/activate
+# Windows PowerShell
+# .\venv\Scripts\Activate.ps1
+# Windows Command Prompt
+# .\venv\Scripts\activate.bat
 pip install -r requirements.txt
 python -m uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
@@ -52,7 +57,7 @@ Backend health check: `http://127.0.0.1:8000/health`
 ### 2) Start frontend
 
 ```bash
-npm ci
+npm install
 npm run dev
 ```
 
