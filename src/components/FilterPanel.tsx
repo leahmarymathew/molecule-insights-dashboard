@@ -27,7 +27,6 @@ export function FilterPanel({
     filters.minRevenue2024 !== 0,
     filters.minRevenue2025 !== 0,
     filters.minRevenueCagr !== -Infinity,
-    filters.maxHHI !== 1,
     filters.monopolyMode !== "all",
   ].filter(Boolean).length;
 
@@ -103,13 +102,6 @@ export function FilterPanel({
           step={1}
           placeholder="any"
           noFilterValue={-Infinity}
-        />
-        <NumericFilter
-          label="Max HHI"
-          value={filters.maxHHI}
-          onChange={(v) => set("maxHHI", Math.min(1, Math.max(0, v)))}
-          step={0.05}
-          placeholder="1.0"
         />
         <div className="flex flex-col gap-1">
           <label className="text-xs text-muted-foreground">Monopoly</label>

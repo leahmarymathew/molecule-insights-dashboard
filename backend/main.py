@@ -112,6 +112,24 @@ def compute_analytics(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
                 * 100
             )
 
+        price_2023 = rev_2023 / std_2023 if std_2023 > 0 else 0.0
+        price_2024 = rev_2024 / std_2024 if std_2024 > 0 else 0.0
+        price_2025 = rev_2025 / std_2025 if std_2025 > 0 else 0.0
+
+        price_cagr = 0.0
+
+        if price_2023 > 0 and price_2025 > 0:
+            price_cagr = (
+                ((price_2025 / price_2023) ** (1 / 2) - 1)
+                * 100
+            )
+
+        elif price_2024 > 0 and price_2025 > 0:
+            price_cagr = (
+                (price_2025 / price_2024 - 1)
+                * 100
+            )
+
         brand_revenue = defaultdict(float)
 
         for row in mol_rows:
@@ -158,15 +176,23 @@ def compute_analytics(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
             dominance_ratio >= MONOPOLY_THRESHOLD
         )
 
-        hhi = 0.0
+        def norm_cagr(v):
+            clamped = max(-50.0, min(100.0, v))
+            return (clamped + 50) / 150
 
-        if total_rev_3y > 0:
-            for rev in brand_revenue.values():
-                share = rev / total_rev_3y
-                hhi += share ** 2
+        def norm_competition(c):
+            clamped = max(1, min(20, c))
+            return 1 - (clamped - 1) / 19
+
+        opportunity_score = round(
+            (norm_cagr(std_cagr) + norm_cagr(price_cagr) + norm_competition(competition_count))
+            / 3 * 100,
+            1
+        )
 
         analytics.append({
             "Molecule": molecule,
+            "Opportunity_Score": opportunity_score,
             "Competition_Count": competition_count,
             "Dominance_Ratio": round(dominance_ratio, 4),
             "Monopoly_Flag": monopoly_flag,
@@ -178,11 +204,11 @@ def compute_analytics(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
             "STD_2025": round(std_2025, 2),
             "STD_CAGR": round(std_cagr, 2),
             "Revenue_CAGR": round(rev_cagr, 2),
-            "HHI": round(hhi, 4),
+            "Price_Per_Unit_CAGR": round(price_cagr, 2),
         })
 
     analytics.sort(
-        key=lambda x: x["Revenue_2025"],
+        key=lambda x: x["Opportunity_Score"],
         reverse=True
     )
 

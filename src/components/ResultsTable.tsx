@@ -11,6 +11,7 @@ interface Column {
 
 const COLUMNS: Column[] = [
   { key: "Molecule", label: "Molecule" },
+  { key: "Opportunity_Score", label: "Opp. Score", align: "right" },
   { key: "Competition_Count", label: "Competition", align: "right" },
   { key: "Monopoly_Flag", label: "Monopoly", align: "center" },
   { key: "Revenue_2023", label: "Revenue 2023", align: "right" },
@@ -18,7 +19,7 @@ const COLUMNS: Column[] = [
   { key: "Revenue_2025", label: "Revenue 2025", align: "right" },
   { key: "STD_CAGR", label: "STD CAGR", align: "right" },
   { key: "Revenue_CAGR", label: "Rev CAGR", align: "right" },
-  { key: "HHI", label: "HHI", align: "right" },
+  { key: "Price_Per_Unit_CAGR", label: "Price/Unit CAGR", align: "right" },
 ];
 
 function fmtRevenue(v: number) {
@@ -33,7 +34,7 @@ function fmtCagr(v: number) {
 }
 
 export function ResultsTable({ data }: { data: MoleculeAnalytics[] }) {
-  const [sortField, setSortField] = useState<SortField>("Revenue_2025");
+  const [sortField, setSortField] = useState<SortField>("Opportunity_Score");
   const [sortDir, setSortDir] = useState<SortDirection>("desc");
 
   function toggleSort(field: SortField) {
@@ -138,6 +139,14 @@ export function ResultsTable({ data }: { data: MoleculeAnalytics[] }) {
                   {m.Molecule}
                 </td>
 
+                {/* Opportunity Score */}
+                <td className={cn(
+                  "px-4 py-2.5 text-right tabular-nums font-semibold",
+                  m.Opportunity_Score >= 60 ? "text-emerald-400" : m.Opportunity_Score >= 40 ? "text-yellow-400" : "text-muted-foreground"
+                )}>
+                  {m.Opportunity_Score.toFixed(1)}
+                </td>
+
                 {/* Competition Count */}
                 <td className="px-4 py-2.5 text-right tabular-nums text-muted-foreground">
                   {m.Competition_Count}
@@ -189,9 +198,14 @@ export function ResultsTable({ data }: { data: MoleculeAnalytics[] }) {
                   {fmtCagr(m.Revenue_CAGR)}
                 </td>
 
-                {/* HHI */}
-                <td className="px-4 py-2.5 text-right tabular-nums text-muted-foreground">
-                  {m.HHI.toFixed(2)}
+                {/* Price/Unit CAGR */}
+                <td
+                  className={cn(
+                    "px-4 py-2.5 text-right tabular-nums font-medium",
+                    m.Price_Per_Unit_CAGR > 0 ? "text-emerald-400" : "text-red-400",
+                  )}
+                >
+                  {fmtCagr(m.Price_Per_Unit_CAGR)}
                 </td>
               </tr>
             ))}

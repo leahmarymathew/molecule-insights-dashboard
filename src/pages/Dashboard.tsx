@@ -16,7 +16,6 @@ const DEFAULT_FILTERS: FilterParams = {
   minRevenue2024: 0,
   minRevenue2025: 0,
   minRevenueCagr: -Infinity,
-  maxHHI: 1,
   monopolyMode: "all",
 };
 
@@ -69,7 +68,6 @@ export default function Dashboard() {
         if (m.Revenue_2024 < filters.minRevenue2024) return false;
         if (m.Revenue_2025 < filters.minRevenue2025) return false;
         if (m.Revenue_CAGR < filters.minRevenueCagr) return false;
-        if (m.HHI > filters.maxHHI) return false;
         if (filters.monopolyMode === "monopoly_only" && !m.Monopoly_Flag) return false;
         if (filters.monopolyMode === "exclude_monopoly" && m.Monopoly_Flag) return false;
         return true;

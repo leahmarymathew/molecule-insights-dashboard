@@ -11,6 +11,7 @@ export interface DatasetRow {
 
 export interface MoleculeAnalytics {
   Molecule: string;
+  Opportunity_Score: number;
   Competition_Count: number;
   Dominance_Ratio: number;
   Monopoly_Flag: boolean;
@@ -22,7 +23,7 @@ export interface MoleculeAnalytics {
   STD_2025: number;
   STD_CAGR: number;
   Revenue_CAGR: number;
-  HHI: number;
+  Price_Per_Unit_CAGR: number;
 }
 
 export interface UploadResponse {
@@ -42,7 +43,6 @@ export interface FilterParams {
   minRevenue2024: number;
   minRevenue2025: number;
   minRevenueCagr: number;
-  maxHHI: number;
   monopolyMode: "all" | "monopoly_only" | "exclude_monopoly";
 }
 
