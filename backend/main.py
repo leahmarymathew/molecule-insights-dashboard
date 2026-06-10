@@ -174,6 +174,7 @@ def compute_analytics(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
 
         monopoly_flag = (
             dominance_ratio >= MONOPOLY_THRESHOLD
+            and competition_count > 1
         )
 
         def norm_cagr(v):
