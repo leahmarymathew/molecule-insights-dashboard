@@ -321,24 +321,8 @@ def compute_analytics(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     analysis_2_revenue = sorted(analytics, key=lambda x: x["Revenue_Based_Score"], reverse=True)
 
     return {
-        "success": True,
-        "analysis_1_growth": {
-            "description": "High-Growth & Competitive Markets (monopolies excluded)",
-            "sort_by": "STD_CAGR (Volume Growth)",
-            "filter": "Excluded: monopolies (80%+ dominance)",
-            "results": analysis_1_growth,
-            "count": len(analysis_1_growth)
-        },
-        "analysis_2_revenue": {
-            "description": "High-Revenue & Market Size Focus (all products)",
-            "sort_by": "Revenue_Based_Score (60% Revenue_2025 + 40% Revenue_CAGR)",
-            "filter": "None (all products included)",
-            "results": analysis_2_revenue,
-            "count": len(analysis_2_revenue)
-        },
-        "total_rows": len(rows),
-        "unique_molecules": len(molecules),
-        "unique_products": len(products),
+        "analysis_1_growth": analysis_1_growth,
+        "analysis_2_revenue": analysis_2_revenue,
     }
 
 
@@ -412,11 +396,24 @@ async def upload_dataset(
                     )
                 )
 
-        analytics = compute_analytics(rows)
+        analytics_result = compute_analytics(rows)
 
         return {
             "success": True,
-            "analytics": analytics,
+            "analysis_1_growth": {
+                "description": "High-Growth & Competitive Markets (monopolies excluded)",
+                "sort_by": "STD_CAGR (Volume Growth)",
+                "filter": "Excluded: monopolies (80%+ dominance)",
+                "results": analytics_result["analysis_1_growth"],
+                "count": len(analytics_result["analysis_1_growth"])
+            },
+            "analysis_2_revenue": {
+                "description": "High-Revenue & Market Size Focus (all products)",
+                "sort_by": "Revenue_Based_Score (60% Revenue_2025 + 40% Revenue_CAGR)",
+                "filter": "None (all products included)",
+                "results": analytics_result["analysis_2_revenue"],
+                "count": len(analytics_result["analysis_2_revenue"])
+            },
             "total_rows": len(rows),
             "unique_molecules": len(molecules),
             "unique_products": len(products),
