@@ -21,7 +21,9 @@
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Leah\\\\Documents\\\\git\\\\molecule\\\\molecule-insights-dashboard\" -MaxDepth 1 -Filter \"*.md\" -File)",
       "Bash(Select-Object Name)",
       "Bash(grep -E '\\\\.md$')",
-      "Bash(xargs grep -l \"server\\\\|start\")"
+      "Bash(xargs grep -l \"server\\\\|start\")",
+      "Skill(run)",
+      "Bash(python3 *)"
     ]
   }
 }

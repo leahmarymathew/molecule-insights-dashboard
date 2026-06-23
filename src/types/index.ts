@@ -12,6 +12,7 @@ export interface DatasetRow {
 export interface MoleculeAnalytics {
   Molecule: string;
   Opportunity_Score: number;
+  Revenue_Based_Score?: number;
   Competition_Count: number;
   Dominance_Ratio: number;
   Monopoly_Flag: boolean;
@@ -24,12 +25,30 @@ export interface MoleculeAnalytics {
   STD_CAGR: number;
   Revenue_CAGR: number;
   Price_Per_Unit_CAGR: number;
+  Data_Quality_Flags?: {
+    is_new_entrant: boolean;
+    is_exiting: boolean;
+    is_zero_revenue: boolean;
+    is_low_revenue: boolean;
+    has_2023_data: boolean;
+    has_2024_data: boolean;
+    has_2025_data: boolean;
+  };
+}
+
+export interface Analysis {
+  description: string;
+  sort_by: string;
+  filter: string;
+  results: MoleculeAnalytics[];
+  count: number;
 }
 
 export interface UploadResponse {
   success: boolean;
-  rows: DatasetRow[];
-  analytics: MoleculeAnalytics[];
+  analytics?: MoleculeAnalytics[];
+  analysis_1_growth?: Analysis;
+  analysis_2_revenue?: Analysis;
   total_rows: number;
   unique_molecules: number;
   unique_products: number;

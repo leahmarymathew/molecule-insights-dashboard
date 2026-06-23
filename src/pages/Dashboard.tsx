@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { FlaskConical, Target, ShieldAlert, TrendingUp } from "lucide-react";
-import type { MoleculeAnalytics, FilterParams, UploadResponse, NavSection } from "@/types";
+import type { MoleculeAnalytics, FilterParams, UploadResponse, NavSection, Analysis } from "@/types";
 import { AppSidebar } from "@/components/AppSidebar";
 import { Header } from "@/components/Header";
 import { KpiCard } from "@/components/KpiCard";
@@ -41,6 +41,9 @@ function exportCsv(data: MoleculeAnalytics[]) {
 export default function Dashboard() {
   const [activeSection, setActiveSection] = useState<NavSection>("overview");
   const [analytics, setAnalytics] = useState<MoleculeAnalytics[]>([]);
+  const [analysis1Growth, setAnalysis1Growth] = useState<Analysis | null>(null);
+  const [analysis2Revenue, setAnalysis2Revenue] = useState<Analysis | null>(null);
+  const [activeAnalysis, setActiveAnalysis] = useState<"growth" | "revenue">("growth");
   const [filters, setFilters] = useState<FilterParams>(DEFAULT_FILTERS);
   const [summary, setSummary] = useState<{
     totalRows: number;
@@ -49,7 +52,18 @@ export default function Dashboard() {
   } | null>(null);
 
   function handleUploadComplete(res: UploadResponse) {
-    setAnalytics(res.analytics);
+    // Handle both old and new response formats
+    const allAnalytics = res.analytics || [];
+    const analysis1 = res.analysis_1_growth || null;
+    const analysis2 = res.analysis_2_revenue || null;
+
+    // Use analysis_1_growth results if available, otherwise fallback to analytics
+    const resultsToUse = analysis1?.results || allAnalytics;
+    
+    setAnalytics(resultsToUse);
+    setAnalysis1Growth(analysis1);
+    setAnalysis2Revenue(analysis2);
+    setActiveAnalysis("growth");
     setSummary({
       totalRows: res.total_rows,
       uniqueMolecules: res.unique_molecules,
@@ -59,9 +73,14 @@ export default function Dashboard() {
     setActiveSection("overview");
   }
 
+  // Get current analysis data
+  const currentAnalysisData = activeAnalysis === "growth" 
+    ? (analysis1Growth?.results || analytics)
+    : (analysis2Revenue?.results || analytics);
+
   const filtered = useMemo(
     () =>
-      analytics.filter((m) => {
+      currentAnalysisData.filter((m) => {
         if (m.STD_CAGR < filters.minStdCagr) return false;
         if (m.Competition_Count > filters.maxCompetitionCount) return false;
         if (m.Revenue_2023 < filters.minRevenue2023) return false;
@@ -72,7 +91,7 @@ export default function Dashboard() {
         if (filters.monopolyMode === "exclude_monopoly" && m.Monopoly_Flag) return false;
         return true;
       }),
-    [analytics, filters],
+    [currentAnalysisData, filters],
   );
 
   const kpis = useMemo(() => {
@@ -152,11 +171,53 @@ export default function Dashboard() {
           {/* MOLECULES */}
           {activeSection === "molecules" && (
             <div className="p-6 space-y-4">
+              {/* Analysis Toggle */}
+              {(analysis1Growth || analysis2Revenue) && (
+                <div className="flex gap-2 border-b border-border">
+                  <button
+                    onClick={() => setActiveAnalysis("growth")}
+                    className={`px-4 py-2 text-sm font-medium transition-colors ${
+                      activeAnalysis === "growth"
+                        ? "border-b-2 border-primary text-primary"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    🚀 Growth Focus {analysis1Growth && `(${analysis1Growth.count})`}
+                  </button>
+                  <button
+                    onClick={() => setActiveAnalysis("revenue")}
+                    className={`px-4 py-2 text-sm font-medium transition-colors ${
+                      activeAnalysis === "revenue"
+                        ? "border-b-2 border-primary text-primary"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    💰 Revenue Focus {analysis2Revenue && `(${analysis2Revenue.count})`}
+                  </button>
+                </div>
+              )}
+
+              {/* Analysis Description */}
+              {activeAnalysis === "growth" && analysis1Growth && (
+                <div className="text-xs text-muted-foreground bg-muted/50 p-3 rounded">
+                  <p><strong>{analysis1Growth.description}</strong></p>
+                  <p>Filter: {analysis1Growth.filter}</p>
+                  <p>Sort: {analysis1Growth.sort_by}</p>
+                </div>
+              )}
+              {activeAnalysis === "revenue" && analysis2Revenue && (
+                <div className="text-xs text-muted-foreground bg-muted/50 p-3 rounded">
+                  <p><strong>{analysis2Revenue.description}</strong></p>
+                  <p>Filter: {analysis2Revenue.filter}</p>
+                  <p>Sort: {analysis2Revenue.sort_by}</p>
+                </div>
+              )}
+
               <FilterPanel
                 filters={filters}
                 onChange={setFilters}
                 onReset={() => setFilters(DEFAULT_FILTERS)}
-                totalCount={analytics.length}
+                totalCount={currentAnalysisData.length}
                 filteredCount={filtered.length}
               />
               <ResultsTable data={filtered} />
