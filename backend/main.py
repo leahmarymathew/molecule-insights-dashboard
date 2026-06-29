@@ -197,50 +197,10 @@ def compute_analytics(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
             clamped = max(-50.0, min(100.0, v))
             return (clamped + 50) / 150
         
-        def norm_competition(c):
-            """
-            Normalize competition count.
-            Handles: single vendor, monopoly, fragmented.
-            Range: [1, 20] brands → [0, 1] (more competition = better)
-            """
-            if c < 1:
-                return 0.0  # No competitors = worst scenario
-            clamped = max(1, min(20, c))
-            return 1 - (clamped - 1) / 19
-
-        # Calculate weighted opportunity score
-        # Weights: 45% revenue, 35% STD growth, 20% competition
-        revenue_score = norm_revenue(rev_2025) * 0.45
-        growth_score = norm_cagr(std_cagr) * 0.35
-        competition_score = norm_competition(competition_count) * 0.20
-        
-        # Base score before adjustments
-        base_score = (revenue_score + growth_score + competition_score) * 100
-        
-        # Apply edge case penalties/adjustments
-        opportunity_score = base_score
-        
-        # Penalize if zero revenue (markets to skip)
-        if is_zero_revenue:
-            opportunity_score *= 0.2  # Severe penalty
-        
-        # Penalize very small revenues (niche products, not worth attention)
-        elif is_low_revenue:
-            opportunity_score *= 0.6  # Moderate penalty
-        
-        # Penalize exiting products (declining markets)
-        if is_exiting:
-            opportunity_score *= 0.7
-        
-        # Boost new entrants if they show strong 2025 metrics
-        if is_new_entrant and rev_2025 > 500000:
-            opportunity_score *= 1.15
-        
-        # Penalize if monopoly (risk factor)
-        if monopoly_flag:
-            opportunity_score *= 0.85
-        
-        opportunity_score = round(max(0.0, opportunity_score), 1)
+        # Opportunity Score: 50% Revenue 2025 + 50% Revenue CAGR
+        opportunity_score = round(
+            (norm_revenue(rev_2025) * 0.5 + norm_cagr(rev_cagr) * 0.5) * 100, 1
+        )
 
         analytics.append({
             "Molecule": molecule,
