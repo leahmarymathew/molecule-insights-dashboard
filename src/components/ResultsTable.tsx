@@ -4,9 +4,10 @@ import type { MoleculeAnalytics, SortField, SortDirection } from "@/types";
 import { cn } from "@/lib/utils";
 
 interface Column {
-  key: SortField;
+  key: SortField | "Flags";
   label: string;
   align?: "right" | "center";
+  sortable?: boolean;
 }
 
 const GROWTH_COLUMNS: Column[] = [
@@ -20,18 +21,21 @@ const GROWTH_COLUMNS: Column[] = [
   { key: "STD_2024", label: "STD 2024", align: "right" },
   { key: "STD_2025", label: "STD 2025", align: "right" },
   { key: "STD_CAGR", label: "STD CAGR", align: "right" },
+  { key: "Flags", label: "Flags", sortable: false },
 ];
 
 const REVENUE_COLUMNS: Column[] = [
   { key: "Molecule", label: "Molecule" },
   { key: "Opportunity_Score", label: "Opp. Score", align: "right" },
   { key: "Competition_Count", label: "Competition", align: "right" },
+  { key: "Dominance_Ratio", label: "Dominance", align: "right" },
   { key: "Monopoly_Flag", label: "Monopoly", align: "center" },
   { key: "Revenue_2023", label: "Revenue 2023", align: "right" },
   { key: "Revenue_2024", label: "Revenue 2024", align: "right" },
   { key: "Revenue_2025", label: "Revenue 2025", align: "right" },
   { key: "STD_CAGR", label: "STD CAGR", align: "right" },
   { key: "Revenue_CAGR", label: "Rev CAGR", align: "right" },
+  { key: "Flags", label: "Flags", sortable: false },
 ];
 
 function fmtRevenue(v: number) {
@@ -42,7 +46,25 @@ function fmtCagr(v: number) {
   return v.toFixed(2);
 }
 
-function renderCell(col: SortField, m: MoleculeAnalytics) {
+const FLAG_STYLES: Record<string, string> = {
+  SINGLE_BRAND: "bg-zinc-400/10 text-zinc-400 border-zinc-400/20",
+  DEAD: "bg-red-900/20 text-red-300 border-red-300/20",
+  EXITING: "bg-red-400/10 text-red-400 border-red-400/20",
+  COLLAPSING: "bg-orange-400/10 text-orange-400 border-orange-400/20",
+  SPIKE: "bg-yellow-400/10 text-yellow-400 border-yellow-400/20",
+  VOL_DOWN_REV_UP: "bg-purple-400/10 text-purple-400 border-purple-400/20",
+};
+
+const FLAG_LABELS: Record<string, string> = {
+  SINGLE_BRAND: "Single Brand",
+  DEAD: "Dead",
+  EXITING: "Exiting",
+  COLLAPSING: "Collapsing",
+  SPIKE: "Spike",
+  VOL_DOWN_REV_UP: "Vol↓Rev↑",
+};
+
+function renderCell(col: SortField | "Flags", m: MoleculeAnalytics) {
   switch (col) {
     case "Molecule":
       return (
@@ -100,6 +122,34 @@ function renderCell(col: SortField, m: MoleculeAnalytics) {
           {Math.round(m[col] as number).toLocaleString()}
         </td>
       );
+    case "Dominance_Ratio":
+      return (
+        <td key={col} className="px-4 py-2.5 text-right tabular-nums text-muted-foreground">
+          {(m.Dominance_Ratio * 100).toFixed(1)}%
+        </td>
+      );
+    case "Flags":
+      return (
+        <td key={col} className="px-4 py-2.5">
+          {m.Flags.length === 0 ? (
+            <span className="text-xs text-muted-foreground/40">—</span>
+          ) : (
+            <div className="flex flex-wrap gap-1">
+              {m.Flags.map((f) => (
+                <span
+                  key={f}
+                  className={cn(
+                    "inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium border whitespace-nowrap",
+                    FLAG_STYLES[f] ?? "bg-muted text-muted-foreground border-border",
+                  )}
+                >
+                  {FLAG_LABELS[f] ?? f}
+                </span>
+              ))}
+            </div>
+          )}
+        </td>
+      );
     case "STD_CAGR":
     case "Revenue_CAGR": {
       const v = m[col] as number;
@@ -142,11 +192,12 @@ export function ResultsTable({
     setSortDir("desc");
   }, [analysisMode]);
 
-  function toggleSort(field: SortField) {
+  function toggleSort(field: SortField | "Flags") {
+    if (field === "Flags") return;
     if (sortField === field) {
       setSortDir((d) => (d === "asc" ? "desc" : "asc"));
     } else {
-      setSortField(field);
+      setSortField(field as SortField);
       setSortDir("desc");
     }
   }
@@ -186,43 +237,36 @@ export function ResultsTable({
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border/60 bg-secondary/20">
-              {columns.map(({ key, label, align }) => (
+              {columns.map(({ key, label, align, sortable = true }) => (
                 <th
                   key={key}
                   onClick={() => toggleSort(key)}
                   className={cn(
-                    "px-4 py-2.5 text-xs font-medium uppercase tracking-wide text-muted-foreground cursor-pointer select-none hover:text-foreground whitespace-nowrap transition-colors",
+                    "px-4 py-2.5 text-xs font-medium uppercase tracking-wide text-muted-foreground whitespace-nowrap transition-colors select-none",
+                    sortable && "cursor-pointer hover:text-foreground",
                     align === "right" && "text-right",
                     align === "center" && "text-center",
                   )}
                 >
                   <span className="inline-flex items-center gap-1">
-                    {align === "right" && (
+                    {align === "right" && sortable && (
                       <>
                         {sortField === key ? (
-                          sortDir === "asc" ? (
-                            <ArrowUp className="h-3 w-3" />
-                          ) : (
-                            <ArrowDown className="h-3 w-3" />
-                          )
+                          sortDir === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
                         ) : (
                           <ArrowUpDown className="h-3 w-3 opacity-30" />
                         )}
                         {label}
                       </>
                     )}
-                    {align !== "right" && (
+                    {(align !== "right" || !sortable) && (
                       <>
                         {label}
-                        {sortField === key ? (
-                          sortDir === "asc" ? (
-                            <ArrowUp className="h-3 w-3" />
-                          ) : (
-                            <ArrowDown className="h-3 w-3" />
-                          )
+                        {sortable && (sortField === key ? (
+                          sortDir === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
                         ) : (
                           <ArrowUpDown className="h-3 w-3 opacity-30" />
-                        )}
+                        ))}
                       </>
                     )}
                   </span>

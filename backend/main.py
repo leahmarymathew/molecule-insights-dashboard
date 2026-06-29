@@ -168,39 +168,58 @@ def compute_analytics(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         is_zero_revenue = total_rev_3y == 0
         is_low_revenue = total_rev_3y > 0 and total_rev_3y < 100000  # < $100K total 3-year
         
-        # Robust normalization functions with edge case handling
+        # Normalization helpers
         def norm_revenue(rev_2025_val):
-            """
-            Log-scale normalization for revenue.
-            Handles: zero, very small, and extreme values.
-            Maps to [0, 1] where higher = better
-            """
             if rev_2025_val <= 0:
-                return 0.1  # Minimum baseline for zero/negative
-            
-            # Log scale: log10(rev) clamped to reasonable range
-            # Assumes revenues between $1K and $1B
+                return 0.0
             import math
             log_rev = math.log10(max(rev_2025_val, 1000))
-            log_min = 3.0  # log10(1000) = $1K
-            log_max = 9.0  # log10(1B) = $1B
-            
-            normalized = (log_rev - log_min) / (log_max - log_min)
+            normalized = (log_rev - 3.0) / 6.0  # $1K–$1B → 0–1
             return max(0.0, min(1.0, normalized))
-        
+
         def norm_cagr(v):
-            """
-            Normalize growth rate.
-            Handles: negative growth, zero, extreme growth.
-            Range: [-50%, 100%] → [0, 1]
-            """
-            clamped = max(-50.0, min(100.0, v))
-            return (clamped + 50) / 150
-        
-        # Opportunity Score: 50% Revenue 2025 + 50% Revenue CAGR
-        opportunity_score = round(
-            (norm_revenue(rev_2025) * 0.5 + norm_cagr(rev_cagr) * 0.5) * 100, 1
-        )
+            # Capped at 150% to prevent small-base inflation; range [-50, 150] → [0, 1]
+            clamped = max(-50.0, min(150.0, v))
+            return (clamped + 50) / 200
+
+        def norm_competition(c):
+            # Fewer brands = better opportunity; range [1, 20] → [1, 0]
+            clamped = max(1, min(20, c))
+            return 1 - (clamped - 1) / 19
+
+        # Opportunity Score: 40% revenue + 35% rev CAGR (revenue-weighted) + 25% competition
+        rev_norm = norm_revenue(rev_2025)
+        base_score = (
+            rev_norm * 0.40
+            + norm_cagr(rev_cagr) * rev_norm * 0.35
+            + norm_competition(competition_count) * 0.25
+        ) * 100
+
+        # Rank-down multipliers for poor market conditions (stack when both apply)
+        score = base_score
+        if rev_2025 == 0:
+            score *= 0.10
+        if rev_cagr < -20:
+            score *= 0.60
+        if rev_2023 > 0 and rev_2025 < rev_2023 * 0.50:
+            score *= 0.50
+
+        opportunity_score = round(max(0.0, score), 1)
+
+        # Flags
+        flags = []
+        if competition_count == 1:
+            flags.append("SINGLE_BRAND")
+        if rev_2025 == 0:
+            flags.append("DEAD")
+        if rev_2023 > 0 and rev_2025 == 0:
+            flags.append("EXITING")
+        if rev_cagr < -20:
+            flags.append("COLLAPSING")
+        if rev_2023 > 0 and rev_2024 > rev_2023 * 1.5 and rev_2025 < rev_2024 * 0.7:
+            flags.append("SPIKE")
+        if std_cagr < 0 and rev_cagr > 0:
+            flags.append("VOL_DOWN_REV_UP")
 
         analytics.append({
             "Molecule": molecule,
@@ -216,23 +235,17 @@ def compute_analytics(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
             "STD_2025": round(std_2025, 2),
             "STD_CAGR": round(std_cagr, 2),
             "Revenue_CAGR": round(rev_cagr, 2),
-            "Data_Quality_Flags": {
-                "is_new_entrant": is_new_entrant,
-                "is_exiting": is_exiting,
-                "is_zero_revenue": is_zero_revenue,
-                "is_low_revenue": is_low_revenue,
-                "has_2023_data": has_2023_data,
-                "has_2024_data": has_2024_data,
-                "has_2025_data": has_2025_data,
-            }
+            "Flags": flags,
         })
 
     # Create two separate analyses
     
     # ANALYSIS 1: Before monopoly removal
-    # Keep all products and sort by STD_CAGR
-    analysis_1_growth = list(analytics)
-    analysis_1_growth.sort(key=lambda x: x["STD_CAGR"], reverse=True)
+    # Two-tier sort: molecules with Rev_2025 > 0 first (by STD_CAGR), then dead/zero at bottom
+    analysis_1_growth = sorted(
+        analytics,
+        key=lambda x: (x["Revenue_2025"] == 0, -x["STD_CAGR"])
+    )
     
     # ANALYSIS 2: After monopoly removal
     # Remove monopolies and sort by Opportunity_Score

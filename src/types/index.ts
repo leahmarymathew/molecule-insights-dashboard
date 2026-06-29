@@ -23,15 +23,7 @@ export interface MoleculeAnalytics {
   STD_2025: number;
   STD_CAGR: number;
   Revenue_CAGR: number;
-  Data_Quality_Flags?: {
-    is_new_entrant: boolean;
-    is_exiting: boolean;
-    is_zero_revenue: boolean;
-    is_low_revenue: boolean;
-    has_2023_data: boolean;
-    has_2024_data: boolean;
-    has_2025_data: boolean;
-  };
+  Flags: string[];
 }
 
 export interface Analysis {
@@ -64,5 +56,18 @@ export interface FilterParams {
 }
 
 export type NavSection = "overview" | "molecules" | "reports";
-export type SortField = keyof MoleculeAnalytics;
+export type SortField =
+  | "Molecule"
+  | "Opportunity_Score"
+  | "Competition_Count"
+  | "Dominance_Ratio"
+  | "Monopoly_Flag"
+  | "Revenue_2023"
+  | "Revenue_2024"
+  | "Revenue_2025"
+  | "STD_2023"
+  | "STD_2024"
+  | "STD_2025"
+  | "STD_CAGR"
+  | "Revenue_CAGR";
 export type SortDirection = "asc" | "desc";
