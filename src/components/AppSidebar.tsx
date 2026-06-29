@@ -1,11 +1,10 @@
-import { Atom, LayoutDashboard, FlaskConical, Upload, BarChart3 } from "lucide-react";
+import { Atom, LayoutDashboard, FlaskConical, BarChart3 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { NavSection } from "@/types";
 
 const NAV: { id: NavSection; label: string; icon: React.ElementType }[] = [
   { id: "overview", label: "Overview", icon: LayoutDashboard },
   { id: "molecules", label: "Molecules", icon: FlaskConical },
-  { id: "upload", label: "Upload Dataset", icon: Upload },
   { id: "reports", label: "Reports", icon: BarChart3 },
 ];
 

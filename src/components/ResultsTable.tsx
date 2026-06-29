@@ -16,6 +16,9 @@ const GROWTH_COLUMNS: Column[] = [
   { key: "Revenue_2023", label: "Revenue 2023", align: "right" },
   { key: "Revenue_2024", label: "Revenue 2024", align: "right" },
   { key: "Revenue_2025", label: "Revenue 2025", align: "right" },
+  { key: "STD_2023", label: "STD 2023", align: "right" },
+  { key: "STD_2024", label: "STD 2024", align: "right" },
+  { key: "STD_2025", label: "STD 2025", align: "right" },
   { key: "STD_CAGR", label: "STD CAGR", align: "right" },
 ];
 
@@ -87,6 +90,14 @@ function renderCell(col: SortField, m: MoleculeAnalytics) {
       return (
         <td key={col} className="px-4 py-2.5 text-right tabular-nums text-muted-foreground">
           {fmtRevenue(m[col] as number)}
+        </td>
+      );
+    case "STD_2023":
+    case "STD_2024":
+    case "STD_2025":
+      return (
+        <td key={col} className="px-4 py-2.5 text-right tabular-nums text-muted-foreground">
+          {Math.round(m[col] as number).toLocaleString()}
         </td>
       );
     case "STD_CAGR":

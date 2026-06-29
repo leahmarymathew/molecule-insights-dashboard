@@ -63,6 +63,6 @@ export interface FilterParams {
   monopolyMode: "all" | "monopoly_only" | "exclude_monopoly";
 }
 
-export type NavSection = "overview" | "molecules" | "upload" | "reports";
+export type NavSection = "overview" | "molecules" | "reports";
 export type SortField = keyof MoleculeAnalytics;
 export type SortDirection = "asc" | "desc";

@@ -176,52 +176,40 @@ export default function Dashboard() {
           {/* OVERVIEW */}
           {activeSection === "overview" && (
             <div className="p-6 space-y-6">
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <KpiCard
-                  label="Total Molecules"
-                  value={filtered.length.toString()}
-                  icon={FlaskConical}
-                  hint={
-                    summary
-                      ? `${summary.uniqueProducts} unique brands`
-                      : "Upload a dataset to begin"
-                  }
-                />
-                <KpiCard
-                  label="Growing Molecules"
-                  value={kpis ? kpis.highGrowth.toString() : "—"}
-                  icon={Target}
-                  hint="Positive STD CAGR"
-                  highlight={kpis && kpis.highGrowth > 0 ? "green" : undefined}
-                />
-                <KpiCard
-                  label="Monopoly Molecules"
-                  value={kpis ? kpis.monopolies.toString() : "—"}
-                  icon={ShieldAlert}
-                  hint="Dominance Ratio ≥ 80%"
-                  highlight={kpis && kpis.monopolies > 0 ? "red" : undefined}
-                />
-                <KpiCard
-                  label="Avg STD CAGR"
-                  value={kpis ? `${kpis.avgCagr.toFixed(1)}%` : "—"}
-                  icon={TrendingUp}
-                  hint={kpis ? `Total revenue: ${fmtRevenue(kpis.totalRev)}` : "2-year unit growth"}
-                />
-              </div>
+              <UploadSection onUploadComplete={handleUploadComplete} currentSummary={summary} />
 
-              {analytics.length > 0 ? (
-                <OverviewCharts analytics={filtered} />
-              ) : (
-                <div className="flex flex-col items-center justify-center h-64 rounded-lg border border-dashed border-border/60">
-                  <FlaskConical className="h-12 w-12 text-muted-foreground mb-4 opacity-30" />
-                  <p className="text-sm text-muted-foreground">No data loaded yet</p>
-                  <button
-                    onClick={() => setActiveSection("upload")}
-                    className="mt-3 text-sm text-primary underline underline-offset-2 hover:opacity-80 transition-opacity"
-                  >
-                    Upload a dataset to get started
-                  </button>
-                </div>
+              {analytics.length > 0 && (
+                <>
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    <KpiCard
+                      label="Total Molecules"
+                      value={filtered.length.toString()}
+                      icon={FlaskConical}
+                      hint={`${summary?.uniqueProducts ?? 0} unique brands`}
+                    />
+                    <KpiCard
+                      label="Growing Molecules"
+                      value={kpis ? kpis.highGrowth.toString() : "—"}
+                      icon={Target}
+                      hint="Positive STD CAGR"
+                      highlight={kpis && kpis.highGrowth > 0 ? "green" : undefined}
+                    />
+                    <KpiCard
+                      label="Monopoly Molecules"
+                      value={kpis ? kpis.monopolies.toString() : "—"}
+                      icon={ShieldAlert}
+                      hint="Dominance Ratio ≥ 80%"
+                      highlight={kpis && kpis.monopolies > 0 ? "red" : undefined}
+                    />
+                    <KpiCard
+                      label="Avg STD CAGR"
+                      value={kpis ? `${kpis.avgCagr.toFixed(1)}%` : "—"}
+                      icon={TrendingUp}
+                      hint={kpis ? `Total revenue: ${fmtRevenue(kpis.totalRev)}` : "2-year unit growth"}
+                    />
+                  </div>
+                  <OverviewCharts analytics={filtered} />
+                </>
               )}
             </div>
           )}
@@ -283,13 +271,6 @@ export default function Dashboard() {
                 filteredCount={filtered.length}
               />
               <ResultsTable data={filtered} analysisMode={activeAnalysis} />
-            </div>
-          )}
-
-          {/* UPLOAD */}
-          {activeSection === "upload" && (
-            <div className="p-6 max-w-xl">
-              <UploadSection onUploadComplete={handleUploadComplete} currentSummary={summary} />
             </div>
           )}
 
