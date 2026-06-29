@@ -23,7 +23,9 @@
       "Bash(grep -E '\\\\.md$')",
       "Bash(xargs grep -l \"server\\\\|start\")",
       "Skill(run)",
-      "Bash(python3 *)"
+      "Bash(python3 *)",
+      "Bash(git -C \"C:/Users/Leah/Documents/git/molecule/molecule-insights-dashboard\" status)",
+      "Bash(git -C \"C:/Users/Leah/Documents/git/molecule/molecule-insights-dashboard\" log --oneline -3)"
     ]
   }
 }

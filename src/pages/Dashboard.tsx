@@ -32,24 +32,44 @@ function fmtRevenue(v: number) {
   return `$${v.toFixed(0)}`;
 }
 
-function exportExcel(fileName: string, data: MoleculeAnalytics[]) {
+function exportExcel(
+  fileName: string,
+  data: MoleculeAnalytics[],
+  mode: "growth" | "revenue",
+) {
   if (!data.length) return;
 
-  const rows = data.map((m) => ({
-    Molecule: m.Molecule,
-    Opportunity_Score: m.Opportunity_Score,
-    Competition_Count: m.Competition_Count,
-    Dominance_Ratio: m.Dominance_Ratio,
-    Monopoly_Flag: m.Monopoly_Flag,
-    Revenue_2023: m.Revenue_2023,
-    Revenue_2024: m.Revenue_2024,
-    Revenue_2025: m.Revenue_2025,
-    STD_2023: m.STD_2023,
-    STD_2024: m.STD_2024,
-    STD_2025: m.STD_2025,
-    STD_CAGR: m.STD_CAGR,
-    Revenue_CAGR: m.Revenue_CAGR,
-  }));
+  const rows = data.map((m) =>
+    mode === "growth"
+      ? {
+          Molecule: m.Molecule,
+          Competition_Count: m.Competition_Count,
+          Dominance_Ratio: m.Dominance_Ratio,
+          Monopoly_Flag: m.Monopoly_Flag,
+          Revenue_2023: m.Revenue_2023,
+          Revenue_2024: m.Revenue_2024,
+          Revenue_2025: m.Revenue_2025,
+          STD_2023: m.STD_2023,
+          STD_2024: m.STD_2024,
+          STD_2025: m.STD_2025,
+          STD_CAGR: m.STD_CAGR,
+        }
+      : {
+          Molecule: m.Molecule,
+          Opportunity_Score: m.Opportunity_Score,
+          Competition_Count: m.Competition_Count,
+          Dominance_Ratio: m.Dominance_Ratio,
+          Monopoly_Flag: m.Monopoly_Flag,
+          Revenue_2023: m.Revenue_2023,
+          Revenue_2024: m.Revenue_2024,
+          Revenue_2025: m.Revenue_2025,
+          STD_2023: m.STD_2023,
+          STD_2024: m.STD_2024,
+          STD_2025: m.STD_2025,
+          STD_CAGR: m.STD_CAGR,
+          Revenue_CAGR: m.Revenue_CAGR,
+        },
+  );
 
   const sheet = XLSX.utils.json_to_sheet(rows);
   const workbook = XLSX.utils.book_new();
@@ -64,7 +84,7 @@ export default function Dashboard() {
   const [analysis2Revenue, setAnalysis2Revenue] = useState<Analysis | null>(null);
   const [activeAnalysis, setActiveAnalysis] = useState<"growth" | "revenue">("growth");
   const [filters, setFilters] = useState<FilterParams>(DEFAULT_FILTERS);
-  const [reportMinRevenueCagr, setReportMinRevenueCagr] = useState<number>(0);
+  const [reportMinRevenueCagr, setReportMinRevenueCagr] = useState<number>(-Infinity);
   const [reportMinRevenue2025, setReportMinRevenue2025] = useState<number>(0);
   const [summary, setSummary] = useState<{
     totalRows: number;
@@ -126,24 +146,19 @@ export default function Dashboard() {
     return { highGrowth, monopolies, avgCagr, totalRev };
   }, [filtered]);
 
-  const exportBase = useMemo(
-    () => analysis1Growth?.results || analysis2Revenue?.results || analytics,
-    [analysis1Growth, analysis2Revenue, analytics],
-  );
-
   const preMonopolyExport = useMemo(
-    () => [...exportBase].sort((a, b) => b.STD_CAGR - a.STD_CAGR),
-    [exportBase],
+    () => [...(analysis1Growth?.results || analytics)].sort((a, b) => b.STD_CAGR - a.STD_CAGR),
+    [analysis1Growth, analytics],
   );
 
   const postMonopolyExport = useMemo(
     () =>
-      exportBase
+      (analysis2Revenue?.results || analytics.filter((m) => !m.Monopoly_Flag))
         .filter((m) => !m.Monopoly_Flag)
         .filter((m) => m.Revenue_CAGR >= reportMinRevenueCagr)
         .filter((m) => m.Revenue_2025 >= reportMinRevenue2025)
         .sort((a, b) => b.Opportunity_Score - a.Opportunity_Score),
-    [exportBase, reportMinRevenueCagr, reportMinRevenue2025],
+    [analysis2Revenue, analytics, reportMinRevenueCagr, reportMinRevenue2025],
   );
 
   return (
@@ -225,7 +240,7 @@ export default function Dashboard() {
                         : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
-                    🚀 Growth Focus {analysis1Growth && `(${analysis1Growth.count})`}
+                    Growth Focus {analysis1Growth && `(${analysis1Growth.count})`}
                   </button>
                   <button
                     onClick={() => setActiveAnalysis("revenue")}
@@ -235,7 +250,7 @@ export default function Dashboard() {
                         : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
-                    💰 Revenue Focus {analysis2Revenue && `(${analysis2Revenue.count})`}
+                    Revenue Focus {analysis2Revenue && `(${analysis2Revenue.count})`}
                   </button>
                 </div>
               )}
@@ -267,7 +282,7 @@ export default function Dashboard() {
                 totalCount={currentAnalysisData.length}
                 filteredCount={filtered.length}
               />
-              <ResultsTable data={filtered} />
+              <ResultsTable data={filtered} analysisMode={activeAnalysis} />
             </div>
           )}
 
@@ -295,9 +310,7 @@ export default function Dashboard() {
                       Before Monopoly Removal (sorted by STD CAGR)
                     </p>
                     <button
-                      onClick={() =>
-                        exportExcel("before_monopoly_removal_std_cagr.xlsx", preMonopolyExport)
-                      }
+                      onClick={() => exportExcel("before_monopoly_removal_std_cagr.xlsx", preMonopolyExport, "growth")}
                       className="w-full px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:opacity-90 transition-opacity"
                     >
                       Export {preMonopolyExport.length} molecules to Excel
@@ -313,8 +326,13 @@ export default function Dashboard() {
                         Min Revenue CAGR %
                         <input
                           type="number"
-                          value={reportMinRevenueCagr}
-                          onChange={(e) => setReportMinRevenueCagr(Number(e.target.value) || 0)}
+                          value={isFinite(reportMinRevenueCagr) ? reportMinRevenueCagr : ""}
+                          placeholder="No minimum"
+                          onChange={(e) =>
+                            setReportMinRevenueCagr(
+                              e.target.value === "" ? -Infinity : Number(e.target.value),
+                            )
+                          }
                           className="h-9 w-full rounded-md border border-border/60 bg-secondary/30 px-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
                         />
                       </label>
@@ -330,10 +348,7 @@ export default function Dashboard() {
                     </div>
                     <button
                       onClick={() =>
-                        exportExcel(
-                          "after_monopoly_removal_opportunity_score.xlsx",
-                          postMonopolyExport,
-                        )
+                        exportExcel("after_monopoly_removal_opportunity_score.xlsx", postMonopolyExport, "revenue")
                       }
                       className="w-full px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:opacity-90 transition-opacity"
                     >
