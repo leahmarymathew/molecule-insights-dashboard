@@ -243,24 +243,13 @@ export default function Dashboard() {
                 </div>
               )}
 
-              {/* Analysis Description */}
-              {activeAnalysis === "growth" && analysis1Growth && (
-                <div className="text-xs text-muted-foreground bg-muted/50 p-3 rounded">
-                  <p>
-                    <strong>{analysis1Growth.description}</strong>
-                  </p>
-                  <p>Filter: {analysis1Growth.filter}</p>
-                  <p>Sort: {analysis1Growth.sort_by}</p>
-                </div>
-              )}
-              {activeAnalysis === "revenue" && analysis2Revenue && (
-                <div className="text-xs text-muted-foreground bg-muted/50 p-3 rounded">
-                  <p>
-                    <strong>{analysis2Revenue.description}</strong>
-                  </p>
-                  <p>Filter: {analysis2Revenue.filter}</p>
-                  <p>Sort: {analysis2Revenue.sort_by}</p>
-                </div>
+              {/* Analysis description */}
+              {(analysis1Growth || analysis2Revenue) && (
+                <p className="text-xs text-muted-foreground">
+                  {activeAnalysis === "growth"
+                    ? `${analysis1Growth?.description} · sorted by ${analysis1Growth?.sort_by}`
+                    : `${analysis2Revenue?.description} · sorted by ${analysis2Revenue?.sort_by}`}
+                </p>
               )}
 
               <FilterPanel
@@ -276,33 +265,33 @@ export default function Dashboard() {
 
           {/* REPORTS */}
           {activeSection === "reports" && (
-            <div className="p-6 flex flex-col items-center justify-center min-h-80 text-center">
-              <TrendingUp className="h-16 w-16 text-muted-foreground mb-4 opacity-30" />
-              <h2 className="text-lg font-semibold">Reports</h2>
-              <p className="text-sm text-muted-foreground mt-2 max-w-sm">
-                Export two Excel files: one before monopoly removal sorted by STD CAGR, and one
-                after monopoly removal sorted by Opportunity Score with thresholds.
-                {analytics.length === 0 && " Upload a dataset first."}
-              </p>
-              {analytics.length > 0 && (
-                <div className="mt-6 w-full max-w-lg space-y-4 text-left">
+            <div className="p-6 max-w-lg space-y-4">
+              {analytics.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-20 text-center">
+                  <TrendingUp className="h-10 w-10 text-muted-foreground opacity-20 mb-3" />
+                  <p className="text-sm text-muted-foreground">Upload a dataset to generate reports</p>
+                </div>
+              ) : (
+                <>
                   <div className="rounded-lg border border-border/60 bg-card p-4 space-y-3">
-                    <p className="text-sm font-medium text-foreground">
-                      Before Monopoly Removal (sorted by STD CAGR)
-                    </p>
+                    <div>
+                      <p className="text-sm font-medium text-foreground">Growth Focus Export</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">All molecules · sorted by STD CAGR</p>
+                    </div>
                     <button
-                      onClick={() => exportExcel("before_monopoly_removal_std_cagr.xlsx", preMonopolyExport, "growth")}
-                      className="w-full px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:opacity-90 transition-opacity"
+                      onClick={() => exportExcel("growth_focus.xlsx", preMonopolyExport, "growth")}
+                      className="w-full px-3 py-2 bg-primary text-primary-foreground rounded-md text-xs font-medium hover:opacity-90 transition-opacity"
                     >
-                      Export {preMonopolyExport.length} molecules to Excel
+                      Export {preMonopolyExport.length} molecules
                     </button>
                   </div>
 
                   <div className="rounded-lg border border-border/60 bg-card p-4 space-y-3">
-                    <p className="text-sm font-medium text-foreground">
-                      After Monopoly Removal (sorted by Opportunity Score)
-                    </p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <p className="text-sm font-medium text-foreground">Revenue Focus Export</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">Monopolies excluded · sorted by Opportunity Score</p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
                       <label className="flex flex-col gap-1 text-xs text-muted-foreground">
                         Min Revenue CAGR %
                         <input
@@ -314,7 +303,7 @@ export default function Dashboard() {
                               e.target.value === "" ? -Infinity : Number(e.target.value),
                             )
                           }
-                          className="h-9 w-full rounded-md border border-border/60 bg-secondary/30 px-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                          className="h-8 w-full rounded-md border border-border/60 bg-secondary/30 px-2 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
                         />
                       </label>
                       <label className="flex flex-col gap-1 text-xs text-muted-foreground">
@@ -323,20 +312,18 @@ export default function Dashboard() {
                           type="number"
                           value={reportMinRevenue2025}
                           onChange={(e) => setReportMinRevenue2025(Number(e.target.value) || 0)}
-                          className="h-9 w-full rounded-md border border-border/60 bg-secondary/30 px-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                          className="h-8 w-full rounded-md border border-border/60 bg-secondary/30 px-2 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
                         />
                       </label>
                     </div>
                     <button
-                      onClick={() =>
-                        exportExcel("after_monopoly_removal_opportunity_score.xlsx", postMonopolyExport, "revenue")
-                      }
-                      className="w-full px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:opacity-90 transition-opacity"
+                      onClick={() => exportExcel("revenue_focus.xlsx", postMonopolyExport, "revenue")}
+                      className="w-full px-3 py-2 bg-primary text-primary-foreground rounded-md text-xs font-medium hover:opacity-90 transition-opacity"
                     >
-                      Export {postMonopolyExport.length} molecules to Excel
+                      Export {postMonopolyExport.length} molecules
                     </button>
                   </div>
-                </div>
+                </>
               )}
             </div>
           )}

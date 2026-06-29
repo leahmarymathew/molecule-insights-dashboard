@@ -18,9 +18,9 @@ export function AppSidebar({ activeSection, onNavigate, hasData }: AppSidebarPro
   return (
     <aside className="flex flex-col w-56 shrink-0 border-r border-border/60 bg-sidebar h-full">
       {/* Logo */}
-      <div className="flex items-center gap-2.5 px-4 h-14 border-b border-border/60">
-        <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary shrink-0">
-          <Atom className="h-4 w-4 text-primary-foreground" />
+      <div className="flex items-center gap-2.5 px-4 h-12 border-b border-border/60">
+        <div className="flex h-6 w-6 items-center justify-center rounded-md bg-primary shrink-0">
+          <Atom className="h-3.5 w-3.5 text-primary-foreground" />
         </div>
         <span className="text-sm font-semibold text-sidebar-foreground tracking-tight">
           MolecuLab

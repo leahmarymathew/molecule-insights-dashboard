@@ -43,6 +43,52 @@ def compute_analytics(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         if mol:
             molecules[str(mol)].append(row)
 
+    import math
+
+    # Pre-computation pass — derive normalization bounds from the actual dataset
+    _pre_competition: List[int] = []
+    _pre_rev_cagr: List[float] = []
+    for _mol_rows in molecules.values():
+        _brands: set = set()
+        for _row in _mol_rows:
+            _b = _row.get("International Product")
+            if _b:
+                _b = str(_b).strip()
+                if _b:
+                    _brands.add(_b)
+        _pre_competition.append(len(_brands))
+
+        _r23 = sum(to_number(r.get("MAT Q2 2023_LCD MNF")) for r in _mol_rows)
+        _r24 = sum(to_number(r.get("MAT Q2 2024_LCD MNF")) for r in _mol_rows)
+        _r25 = sum(to_number(r.get("MAT Q2 2025_LCD MNF")) for r in _mol_rows)
+        if _r23 > 0 and _r25 > 0:
+            _pre_rev_cagr.append(((_r25 / _r23) ** 0.5 - 1) * 100)
+        elif _r24 > 0 and _r25 > 0:
+            _pre_rev_cagr.append((_r25 / _r24 - 1) * 100)
+        else:
+            _pre_rev_cagr.append(0.0)
+
+    max_competition = max(_pre_competition) if _pre_competition else 1
+    max_competition = max(max_competition, 2)  # guard against single-molecule datasets
+
+    cagr_floor = min(_pre_rev_cagr) if _pre_rev_cagr else -50.0
+    cagr_cap = 150.0
+
+    def norm_revenue(v: float) -> float:
+        if v <= 0:
+            return 0.0
+        log_rev = math.log10(max(v, 1000))
+        return max(0.0, min(1.0, (log_rev - 3.0) / 6.0))
+
+    def norm_cagr(v: float) -> float:
+        clamped = max(cagr_floor, min(cagr_cap, v))
+        cagr_range = cagr_cap - cagr_floor
+        return (clamped - cagr_floor) / cagr_range if cagr_range else 0.5
+
+    def norm_competition(c: int) -> float:
+        clamped = max(1, min(max_competition, c))
+        return 1 - (clamped - 1) / (max_competition - 1)
+
     analytics = []
 
     for molecule, mol_rows in molecules.items():
@@ -159,50 +205,23 @@ def compute_analytics(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
             and competition_count > 1
         )
 
-        # Edge case detection
-        has_2023_data = rev_2023 > 0
-        has_2024_data = rev_2024 > 0
-        has_2025_data = rev_2025 > 0
-        is_new_entrant = (not has_2023_data) and (not has_2024_data) and has_2025_data
-        is_exiting = has_2023_data and (not has_2025_data)
-        is_zero_revenue = total_rev_3y == 0
-        is_low_revenue = total_rev_3y > 0 and total_rev_3y < 100000  # < $100K total 3-year
-        
-        # Normalization helpers
-        def norm_revenue(rev_2025_val):
-            if rev_2025_val <= 0:
-                return 0.0
-            import math
-            log_rev = math.log10(max(rev_2025_val, 1000))
-            normalized = (log_rev - 3.0) / 6.0  # $1K–$1B → 0–1
-            return max(0.0, min(1.0, normalized))
-
-        def norm_cagr(v):
-            # Capped at 150% to prevent small-base inflation; range [-50, 150] → [0, 1]
-            clamped = max(-50.0, min(150.0, v))
-            return (clamped + 50) / 200
-
-        def norm_competition(c):
-            # Fewer brands = better opportunity; range [1, 20] → [1, 0]
-            clamped = max(1, min(20, c))
-            return 1 - (clamped - 1) / 19
-
-        # Opportunity Score: 50% revenue + 30% rev CAGR (revenue-weighted) + 20% competition (revenue-weighted)
+        # Opportunity Score: 40% revenue + 40% CAGR (revenue-weighted) + 20% competition (revenue-weighted)
         rev_norm = norm_revenue(rev_2025)
         base_score = (
-            rev_norm * 0.50
-            + norm_cagr(rev_cagr) * rev_norm * 0.30
+            rev_norm * 0.40
+            + norm_cagr(rev_cagr) * rev_norm * 0.40
             + norm_competition(competition_count) * rev_norm * 0.20
         ) * 100
 
-        # Rank-down multipliers for poor market conditions (stack when both apply)
-        score = base_score
+        # Rank-down multipliers — apply only the most severe single penalty
+        _penalties = []
         if rev_2025 == 0:
-            score *= 0.10
+            _penalties.append(0.10)
         if rev_cagr < -20:
-            score *= 0.60
+            _penalties.append(0.60)
         if rev_2023 > 0 and rev_2025 < rev_2023 * 0.50:
-            score *= 0.50
+            _penalties.append(0.50)
+        score = base_score * (min(_penalties) if _penalties else 1.0)
 
         opportunity_score = round(max(0.0, score), 1)
 
@@ -220,7 +239,7 @@ def compute_analytics(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
             flags.append("SPIKE")
         if std_cagr < 0 and rev_cagr > 0:
             flags.append("VOL_DOWN_REV_UP")
-        if dominance_ratio >= 0.60 and competition_count > 1:
+        if round(dominance_ratio, 2) >= 0.60 and competition_count > 1:
             flags.append("HIGH_DOMINANCE")
 
         analytics.append({
