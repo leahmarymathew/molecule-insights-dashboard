@@ -187,12 +187,12 @@ def compute_analytics(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
             clamped = max(1, min(20, c))
             return 1 - (clamped - 1) / 19
 
-        # Opportunity Score: 40% revenue + 35% rev CAGR (revenue-weighted) + 25% competition
+        # Opportunity Score: 50% revenue + 30% rev CAGR (revenue-weighted) + 20% competition (revenue-weighted)
         rev_norm = norm_revenue(rev_2025)
         base_score = (
-            rev_norm * 0.40
-            + norm_cagr(rev_cagr) * rev_norm * 0.35
-            + norm_competition(competition_count) * 0.25
+            rev_norm * 0.50
+            + norm_cagr(rev_cagr) * rev_norm * 0.30
+            + norm_competition(competition_count) * rev_norm * 0.20
         ) * 100
 
         # Rank-down multipliers for poor market conditions (stack when both apply)
@@ -220,6 +220,8 @@ def compute_analytics(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
             flags.append("SPIKE")
         if std_cagr < 0 and rev_cagr > 0:
             flags.append("VOL_DOWN_REV_UP")
+        if dominance_ratio >= 0.60 and competition_count > 1:
+            flags.append("HIGH_DOMINANCE")
 
         analytics.append({
             "Molecule": molecule,

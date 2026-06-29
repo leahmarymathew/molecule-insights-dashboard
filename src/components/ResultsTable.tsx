@@ -13,7 +13,6 @@ interface Column {
 const GROWTH_COLUMNS: Column[] = [
   { key: "Molecule", label: "Molecule" },
   { key: "Competition_Count", label: "Competition", align: "right" },
-  { key: "Monopoly_Flag", label: "Monopoly", align: "center" },
   { key: "Revenue_2023", label: "Revenue 2023", align: "right" },
   { key: "Revenue_2024", label: "Revenue 2024", align: "right" },
   { key: "Revenue_2025", label: "Revenue 2025", align: "right" },
@@ -29,7 +28,6 @@ const REVENUE_COLUMNS: Column[] = [
   { key: "Opportunity_Score", label: "Opp. Score", align: "right" },
   { key: "Competition_Count", label: "Competition", align: "right" },
   { key: "Dominance_Ratio", label: "Dominance", align: "right" },
-  { key: "Monopoly_Flag", label: "Monopoly", align: "center" },
   { key: "Revenue_2023", label: "Revenue 2023", align: "right" },
   { key: "Revenue_2024", label: "Revenue 2024", align: "right" },
   { key: "Revenue_2025", label: "Revenue 2025", align: "right" },
@@ -53,6 +51,7 @@ const FLAG_STYLES: Record<string, string> = {
   COLLAPSING: "bg-orange-400/10 text-orange-400 border-orange-400/20",
   SPIKE: "bg-yellow-400/10 text-yellow-400 border-yellow-400/20",
   VOL_DOWN_REV_UP: "bg-purple-400/10 text-purple-400 border-purple-400/20",
+  HIGH_DOMINANCE: "bg-amber-400/10 text-amber-400 border-amber-400/20",
 };
 
 const FLAG_LABELS: Record<string, string> = {
@@ -62,6 +61,7 @@ const FLAG_LABELS: Record<string, string> = {
   COLLAPSING: "Collapsing",
   SPIKE: "Spike",
   VOL_DOWN_REV_UP: "Vol↓Rev↑",
+  HIGH_DOMINANCE: "High Dominance",
 };
 
 function renderCell(col: SortField | "Flags", m: MoleculeAnalytics) {
