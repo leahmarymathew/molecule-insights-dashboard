@@ -12,7 +12,6 @@ export interface DatasetRow {
 export interface MoleculeAnalytics {
   Molecule: string;
   Opportunity_Score: number;
-  Revenue_Based_Score?: number;
   Competition_Count: number;
   Dominance_Ratio: number;
   Monopoly_Flag: boolean;
@@ -24,7 +23,6 @@ export interface MoleculeAnalytics {
   STD_2025: number;
   STD_CAGR: number;
   Revenue_CAGR: number;
-  Price_Per_Unit_CAGR: number;
   Data_Quality_Flags?: {
     is_new_entrant: boolean;
     is_exiting: boolean;

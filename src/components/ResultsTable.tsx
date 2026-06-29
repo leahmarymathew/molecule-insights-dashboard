@@ -19,7 +19,6 @@ const COLUMNS: Column[] = [
   { key: "Revenue_2025", label: "Revenue 2025", align: "right" },
   { key: "STD_CAGR", label: "STD CAGR", align: "right" },
   { key: "Revenue_CAGR", label: "Rev CAGR", align: "right" },
-  { key: "Price_Per_Unit_CAGR", label: "Price/Unit CAGR", align: "right" },
 ];
 
 function fmtRevenue(v: number) {
@@ -140,10 +139,16 @@ export function ResultsTable({ data }: { data: MoleculeAnalytics[] }) {
                 </td>
 
                 {/* Opportunity Score */}
-                <td className={cn(
-                  "px-4 py-2.5 text-right tabular-nums font-semibold",
-                  m.Opportunity_Score >= 60 ? "text-emerald-400" : m.Opportunity_Score >= 40 ? "text-yellow-400" : "text-muted-foreground"
-                )}>
+                <td
+                  className={cn(
+                    "px-4 py-2.5 text-right tabular-nums font-semibold",
+                    m.Opportunity_Score >= 60
+                      ? "text-emerald-400"
+                      : m.Opportunity_Score >= 40
+                        ? "text-yellow-400"
+                        : "text-muted-foreground",
+                  )}
+                >
                   {m.Opportunity_Score.toFixed(1)}
                 </td>
 
@@ -196,16 +201,6 @@ export function ResultsTable({ data }: { data: MoleculeAnalytics[] }) {
                   )}
                 >
                   {fmtCagr(m.Revenue_CAGR)}
-                </td>
-
-                {/* Price/Unit CAGR */}
-                <td
-                  className={cn(
-                    "px-4 py-2.5 text-right tabular-nums font-medium",
-                    m.Price_Per_Unit_CAGR > 0 ? "text-emerald-400" : "text-red-400",
-                  )}
-                >
-                  {fmtCagr(m.Price_Per_Unit_CAGR)}
                 </td>
               </tr>
             ))}

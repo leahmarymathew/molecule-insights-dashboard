@@ -112,24 +112,6 @@ def compute_analytics(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
                 * 100
             )
 
-        price_2023 = rev_2023 / std_2023 if std_2023 > 0 else 0.0
-        price_2024 = rev_2024 / std_2024 if std_2024 > 0 else 0.0
-        price_2025 = rev_2025 / std_2025 if std_2025 > 0 else 0.0
-
-        price_cagr = 0.0
-
-        if price_2023 > 0 and price_2025 > 0:
-            price_cagr = (
-                ((price_2025 / price_2023) ** (1 / 2) - 1)
-                * 100
-            )
-
-        elif price_2024 > 0 and price_2025 > 0:
-            price_cagr = (
-                (price_2025 / price_2024 - 1)
-                * 100
-            )
-
         brand_revenue = defaultdict(float)
 
         for row in mol_rows:
@@ -227,14 +209,13 @@ def compute_analytics(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
             return 1 - (clamped - 1) / 19
 
         # Calculate weighted opportunity score
-        # Weights: 35% revenue, 30% STD growth, 20% price growth, 15% competition
-        revenue_score = norm_revenue(rev_2025) * 0.35
-        growth_score = norm_cagr(std_cagr) * 0.30
-        price_score = norm_cagr(price_cagr) * 0.20
-        competition_score = norm_competition(competition_count) * 0.15
+        # Weights: 45% revenue, 35% STD growth, 20% competition
+        revenue_score = norm_revenue(rev_2025) * 0.45
+        growth_score = norm_cagr(std_cagr) * 0.35
+        competition_score = norm_competition(competition_count) * 0.20
         
         # Base score before adjustments
-        base_score = (revenue_score + growth_score + price_score + competition_score) * 100
+        base_score = (revenue_score + growth_score + competition_score) * 100
         
         # Apply edge case penalties/adjustments
         opportunity_score = base_score
@@ -275,7 +256,6 @@ def compute_analytics(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
             "STD_2025": round(std_2025, 2),
             "STD_CAGR": round(std_cagr, 2),
             "Revenue_CAGR": round(rev_cagr, 2),
-            "Price_Per_Unit_CAGR": round(price_cagr, 2),
             "Data_Quality_Flags": {
                 "is_new_entrant": is_new_entrant,
                 "is_exiting": is_exiting,
@@ -289,36 +269,15 @@ def compute_analytics(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
 
     # Create two separate analyses
     
-    # ANALYSIS 1: Growth & Competition Focus
-    # Remove ONLY monopolies (80%+ dominance), keep single vendors
-    # Sort by STD_CAGR (volume growth)
-    analysis_1_growth = [m for m in analytics if not m["Monopoly_Flag"]]
+    # ANALYSIS 1: Before monopoly removal
+    # Keep all products and sort by STD_CAGR
+    analysis_1_growth = list(analytics)
     analysis_1_growth.sort(key=lambda x: x["STD_CAGR"], reverse=True)
     
-    # ANALYSIS 2: Revenue & Size Focus
-    # Include all products
-    # Score by Revenue_2025 (60%) + Revenue_CAGR (40%)
-    def norm_revenue_2025(rev):
-        if rev <= 0:
-            return 0.1
-        import math
-        log_rev = math.log10(max(rev, 1000))
-        log_min = 3.0   # $1K
-        log_max = 9.0   # $1B
-        normalized = (log_rev - log_min) / (log_max - log_min)
-        return max(0.0, min(1.0, normalized))
-    
-    def norm_cagr_v2(v):
-        clamped = max(-50.0, min(100.0, v))
-        return (clamped + 50) / 150
-    
-    # Calculate revenue-based score for each molecule
-    for mol in analytics:
-        rev_2025_score = norm_revenue_2025(mol["Revenue_2025"]) * 0.60
-        rev_cagr_score = norm_cagr_v2(mol["Revenue_CAGR"]) * 0.40
-        mol["Revenue_Based_Score"] = round((rev_2025_score + rev_cagr_score) * 100, 1)
-    
-    analysis_2_revenue = sorted(analytics, key=lambda x: x["Revenue_Based_Score"], reverse=True)
+    # ANALYSIS 2: After monopoly removal
+    # Remove monopolies and sort by Opportunity_Score
+    analysis_2_revenue = [m for m in analytics if not m["Monopoly_Flag"]]
+    analysis_2_revenue.sort(key=lambda x: x["Opportunity_Score"], reverse=True)
 
     return {
         "analysis_1_growth": analysis_1_growth,
@@ -401,16 +360,16 @@ async def upload_dataset(
         return {
             "success": True,
             "analysis_1_growth": {
-                "description": "High-Growth & Competitive Markets (monopolies excluded)",
+                "description": "Before monopoly removal",
                 "sort_by": "STD_CAGR (Volume Growth)",
-                "filter": "Excluded: monopolies (80%+ dominance)",
+                "filter": "None (all products included)",
                 "results": analytics_result["analysis_1_growth"],
                 "count": len(analytics_result["analysis_1_growth"])
             },
             "analysis_2_revenue": {
-                "description": "High-Revenue & Market Size Focus (all products)",
-                "sort_by": "Revenue_Based_Score (60% Revenue_2025 + 40% Revenue_CAGR)",
-                "filter": "None (all products included)",
+                "description": "After monopoly removal",
+                "sort_by": "Opportunity_Score",
+                "filter": "Excluded: monopolies (80%+ dominance)",
                 "results": analytics_result["analysis_2_revenue"],
                 "count": len(analytics_result["analysis_2_revenue"])
             },

@@ -1,6 +1,13 @@
 import { useState, useMemo } from "react";
 import { FlaskConical, Target, ShieldAlert, TrendingUp } from "lucide-react";
-import type { MoleculeAnalytics, FilterParams, UploadResponse, NavSection, Analysis } from "@/types";
+import * as XLSX from "xlsx";
+import type {
+  MoleculeAnalytics,
+  FilterParams,
+  UploadResponse,
+  NavSection,
+  Analysis,
+} from "@/types";
 import { AppSidebar } from "@/components/AppSidebar";
 import { Header } from "@/components/Header";
 import { KpiCard } from "@/components/KpiCard";
@@ -25,17 +32,29 @@ function fmtRevenue(v: number) {
   return `$${v.toFixed(0)}`;
 }
 
-function exportCsv(data: MoleculeAnalytics[]) {
+function exportExcel(fileName: string, data: MoleculeAnalytics[]) {
   if (!data.length) return;
-  const headers = Object.keys(data[0]).join(",");
-  const rows = data.map((r) => Object.values(r).join(",")).join("\n");
-  const blob = new Blob([headers + "\n" + rows], { type: "text/csv" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "molecule_analytics.csv";
-  a.click();
-  URL.revokeObjectURL(url);
+
+  const rows = data.map((m) => ({
+    Molecule: m.Molecule,
+    Opportunity_Score: m.Opportunity_Score,
+    Competition_Count: m.Competition_Count,
+    Dominance_Ratio: m.Dominance_Ratio,
+    Monopoly_Flag: m.Monopoly_Flag,
+    Revenue_2023: m.Revenue_2023,
+    Revenue_2024: m.Revenue_2024,
+    Revenue_2025: m.Revenue_2025,
+    STD_2023: m.STD_2023,
+    STD_2024: m.STD_2024,
+    STD_2025: m.STD_2025,
+    STD_CAGR: m.STD_CAGR,
+    Revenue_CAGR: m.Revenue_CAGR,
+  }));
+
+  const sheet = XLSX.utils.json_to_sheet(rows);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, sheet, "Molecules");
+  XLSX.writeFile(workbook, fileName);
 }
 
 export default function Dashboard() {
@@ -45,6 +64,8 @@ export default function Dashboard() {
   const [analysis2Revenue, setAnalysis2Revenue] = useState<Analysis | null>(null);
   const [activeAnalysis, setActiveAnalysis] = useState<"growth" | "revenue">("growth");
   const [filters, setFilters] = useState<FilterParams>(DEFAULT_FILTERS);
+  const [reportMinRevenueCagr, setReportMinRevenueCagr] = useState<number>(0);
+  const [reportMinRevenue2025, setReportMinRevenue2025] = useState<number>(0);
   const [summary, setSummary] = useState<{
     totalRows: number;
     uniqueMolecules: number;
@@ -53,13 +74,14 @@ export default function Dashboard() {
 
   function handleUploadComplete(res: UploadResponse) {
     // Handle both old and new response formats
-    const allAnalytics = res.analytics || [];
+    const allAnalytics =
+      res.analysis_1_growth?.results || res.analysis_2_revenue?.results || res.analytics || [];
     const analysis1 = res.analysis_1_growth || null;
     const analysis2 = res.analysis_2_revenue || null;
 
     // Use analysis_1_growth results if available, otherwise fallback to analytics
     const resultsToUse = analysis1?.results || allAnalytics;
-    
+
     setAnalytics(resultsToUse);
     setAnalysis1Growth(analysis1);
     setAnalysis2Revenue(analysis2);
@@ -74,9 +96,10 @@ export default function Dashboard() {
   }
 
   // Get current analysis data
-  const currentAnalysisData = activeAnalysis === "growth" 
-    ? (analysis1Growth?.results || analytics)
-    : (analysis2Revenue?.results || analytics);
+  const currentAnalysisData =
+    activeAnalysis === "growth"
+      ? analysis1Growth?.results || analytics
+      : analysis2Revenue?.results || analytics;
 
   const filtered = useMemo(
     () =>
@@ -102,6 +125,26 @@ export default function Dashboard() {
     const totalRev = filtered.reduce((s, m) => s + m.Revenue_2025, 0);
     return { highGrowth, monopolies, avgCagr, totalRev };
   }, [filtered]);
+
+  const exportBase = useMemo(
+    () => analysis1Growth?.results || analysis2Revenue?.results || analytics,
+    [analysis1Growth, analysis2Revenue, analytics],
+  );
+
+  const preMonopolyExport = useMemo(
+    () => [...exportBase].sort((a, b) => b.STD_CAGR - a.STD_CAGR),
+    [exportBase],
+  );
+
+  const postMonopolyExport = useMemo(
+    () =>
+      exportBase
+        .filter((m) => !m.Monopoly_Flag)
+        .filter((m) => m.Revenue_CAGR >= reportMinRevenueCagr)
+        .filter((m) => m.Revenue_2025 >= reportMinRevenue2025)
+        .sort((a, b) => b.Opportunity_Score - a.Opportunity_Score),
+    [exportBase, reportMinRevenueCagr, reportMinRevenue2025],
+  );
 
   return (
     <div className="flex h-screen bg-background overflow-hidden">
@@ -200,14 +243,18 @@ export default function Dashboard() {
               {/* Analysis Description */}
               {activeAnalysis === "growth" && analysis1Growth && (
                 <div className="text-xs text-muted-foreground bg-muted/50 p-3 rounded">
-                  <p><strong>{analysis1Growth.description}</strong></p>
+                  <p>
+                    <strong>{analysis1Growth.description}</strong>
+                  </p>
                   <p>Filter: {analysis1Growth.filter}</p>
                   <p>Sort: {analysis1Growth.sort_by}</p>
                 </div>
               )}
               {activeAnalysis === "revenue" && analysis2Revenue && (
                 <div className="text-xs text-muted-foreground bg-muted/50 p-3 rounded">
-                  <p><strong>{analysis2Revenue.description}</strong></p>
+                  <p>
+                    <strong>{analysis2Revenue.description}</strong>
+                  </p>
                   <p>Filter: {analysis2Revenue.filter}</p>
                   <p>Sort: {analysis2Revenue.sort_by}</p>
                 </div>
@@ -237,17 +284,63 @@ export default function Dashboard() {
               <TrendingUp className="h-16 w-16 text-muted-foreground mb-4 opacity-30" />
               <h2 className="text-lg font-semibold">Reports</h2>
               <p className="text-sm text-muted-foreground mt-2 max-w-sm">
-                Export filtered molecule analytics as CSV.
+                Export two Excel files: one before monopoly removal sorted by STD CAGR, and one
+                after monopoly removal sorted by Opportunity Score with thresholds.
                 {analytics.length === 0 && " Upload a dataset first."}
               </p>
               {analytics.length > 0 && (
-                <button
-                  onClick={() => exportCsv(filtered)}
-                  className="mt-6 px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:opacity-90 transition-opacity"
-                >
-                  Export {filtered.length} molecule
-                  {filtered.length !== 1 ? "s" : ""} as CSV
-                </button>
+                <div className="mt-6 w-full max-w-lg space-y-4 text-left">
+                  <div className="rounded-lg border border-border/60 bg-card p-4 space-y-3">
+                    <p className="text-sm font-medium text-foreground">
+                      Before Monopoly Removal (sorted by STD CAGR)
+                    </p>
+                    <button
+                      onClick={() =>
+                        exportExcel("before_monopoly_removal_std_cagr.xlsx", preMonopolyExport)
+                      }
+                      className="w-full px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:opacity-90 transition-opacity"
+                    >
+                      Export {preMonopolyExport.length} molecules to Excel
+                    </button>
+                  </div>
+
+                  <div className="rounded-lg border border-border/60 bg-card p-4 space-y-3">
+                    <p className="text-sm font-medium text-foreground">
+                      After Monopoly Removal (sorted by Opportunity Score)
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <label className="flex flex-col gap-1 text-xs text-muted-foreground">
+                        Min Revenue CAGR %
+                        <input
+                          type="number"
+                          value={reportMinRevenueCagr}
+                          onChange={(e) => setReportMinRevenueCagr(Number(e.target.value) || 0)}
+                          className="h-9 w-full rounded-md border border-border/60 bg-secondary/30 px-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                        />
+                      </label>
+                      <label className="flex flex-col gap-1 text-xs text-muted-foreground">
+                        Min Revenue 2025
+                        <input
+                          type="number"
+                          value={reportMinRevenue2025}
+                          onChange={(e) => setReportMinRevenue2025(Number(e.target.value) || 0)}
+                          className="h-9 w-full rounded-md border border-border/60 bg-secondary/30 px-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                        />
+                      </label>
+                    </div>
+                    <button
+                      onClick={() =>
+                        exportExcel(
+                          "after_monopoly_removal_opportunity_score.xlsx",
+                          postMonopolyExport,
+                        )
+                      }
+                      className="w-full px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:opacity-90 transition-opacity"
+                    >
+                      Export {postMonopolyExport.length} molecules to Excel
+                    </button>
+                  </div>
+                </div>
               )}
             </div>
           )}
