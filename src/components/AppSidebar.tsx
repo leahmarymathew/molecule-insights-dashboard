@@ -57,7 +57,15 @@ export function AppSidebar({
               key={id}
               onClick={() => !disabled && onNavigate(id)}
               disabled={disabled}
-              title={collapsed ? label : undefined}
+              aria-current={active ? "page" : undefined}
+              aria-label={label}
+              title={
+                disabled
+                  ? "Upload a dataset to unlock"
+                  : collapsed
+                    ? label
+                    : undefined
+              }
               className={cn(
                 "w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm text-left transition-colors",
                 collapsed && "justify-center px-0",
@@ -79,6 +87,8 @@ export function AppSidebar({
         <button
           onClick={onToggleCollapsed}
           title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          aria-expanded={!collapsed}
           className={cn(
             "flex items-center gap-2 rounded-md py-1.5 text-xs text-sidebar-foreground/60 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground transition-colors",
             collapsed ? "justify-center px-0 w-9" : "w-full px-3",

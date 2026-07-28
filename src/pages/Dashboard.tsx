@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { FlaskConical, Target, ShieldAlert, TrendingUp, Download } from "lucide-react";
 import * as XLSX from "xlsx";
 import type { MoleculeAnalytics, FilterParams, UploadResponse, NavSection, Analysis } from "@/types";
@@ -11,6 +11,7 @@ import { ResultsTable } from "@/components/ResultsTable";
 import { OverviewCharts } from "@/components/OverviewCharts";
 
 const SIDEBAR_COLLAPSED_KEY = "moleculab.sidebarCollapsed";
+const MOBILE_BREAKPOINT = 768;
 
 const DEFAULT_FILTERS: FilterParams = {
   minStdCagr: -Infinity,
@@ -79,9 +80,11 @@ function exportCsv(fileName: string, data: MoleculeAnalytics[], mode: "growth" |
 
 export default function Dashboard() {
   const [activeSection, setActiveSection] = useState<NavSection>("overview");
-  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(
-    () => typeof window !== "undefined" && localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === "true",
-  );
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    if (window.innerWidth < MOBILE_BREAKPOINT) return true;
+    return localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === "true";
+  });
   const [analytics, setAnalytics] = useState<MoleculeAnalytics[]>([]);
   const [analysis1Growth, setAnalysis1Growth] = useState<Analysis | null>(null);
   const [analysis2Revenue, setAnalysis2Revenue] = useState<Analysis | null>(null);
@@ -100,6 +103,16 @@ export default function Dashboard() {
       return next;
     });
   }
+
+  useEffect(() => {
+    function handleResize() {
+      if (window.innerWidth < MOBILE_BREAKPOINT) {
+        setSidebarCollapsed(true);
+      }
+    }
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   function handleUploadComplete(res: UploadResponse) {
     // Handle both old and new response formats
@@ -178,7 +191,7 @@ export default function Dashboard() {
 
               {analytics.length > 0 && (
                 <>
-                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     <KpiCard
                       label="Total Molecules"
                       value={filtered.length.toString()}
@@ -206,6 +219,7 @@ export default function Dashboard() {
                       hint={
                         kpis ? `Total revenue: ${fmtRevenue(kpis.totalRev)}` : "2-year unit growth"
                       }
+                      highlight={kpis ? (kpis.avgCagr >= 0 ? "green" : "red") : undefined}
                     />
                   </div>
                   <OverviewCharts analytics={filtered} />
@@ -255,7 +269,8 @@ export default function Dashboard() {
                       )
                     }
                     disabled={!filtered.length}
-                    className="flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-xs font-medium text-foreground hover:bg-secondary transition-colors disabled:opacity-40 disabled:pointer-events-none"
+                    title={!filtered.length ? "No molecules match the current filters" : undefined}
+                    className="flex items-center gap-1.5 whitespace-nowrap rounded-md border border-border px-2.5 py-1.5 text-xs font-medium text-foreground hover:bg-secondary transition-colors disabled:opacity-40 disabled:pointer-events-none"
                   >
                     <Download className="h-3.5 w-3.5" />
                     Export Filtered ({filtered.length})
@@ -269,7 +284,8 @@ export default function Dashboard() {
                       )
                     }
                     disabled={!currentAnalysisData.length}
-                    className="flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-xs font-medium text-foreground hover:bg-secondary transition-colors disabled:opacity-40 disabled:pointer-events-none"
+                    title={!currentAnalysisData.length ? "No data loaded" : undefined}
+                    className="flex items-center gap-1.5 whitespace-nowrap rounded-md border border-border px-2.5 py-1.5 text-xs font-medium text-foreground hover:bg-secondary transition-colors disabled:opacity-40 disabled:pointer-events-none"
                   >
                     <Download className="h-3.5 w-3.5" />
                     Export All ({currentAnalysisData.length})
@@ -294,7 +310,11 @@ export default function Dashboard() {
                 filteredCount={filtered.length}
                 mode={activeAnalysis}
               />
-              <ResultsTable data={filtered} analysisMode={activeAnalysis} />
+              <ResultsTable
+                data={filtered}
+                analysisMode={activeAnalysis}
+                onResetFilters={() => setFilters(DEFAULT_FILTERS)}
+              />
             </div>
           )}
         </main>

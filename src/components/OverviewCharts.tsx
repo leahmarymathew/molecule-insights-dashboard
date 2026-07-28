@@ -115,9 +115,32 @@ export function OverviewCharts({ analytics }: Props) {
         <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-0.5">
           Competition vs STD CAGR
         </h3>
-        <p className="text-xs text-muted-foreground/60 mb-3">
+        <p className="text-xs text-muted-foreground/60 mb-2">
           Bubble size = Revenue 2025 &nbsp;·&nbsp; dashed line = 0% growth
         </p>
+        <div className="flex flex-wrap items-center gap-3 mb-3 text-[11px] text-muted-foreground">
+          <span className="inline-flex items-center gap-1.5">
+            <span
+              className="h-2 w-2 rounded-full"
+              style={{ backgroundColor: "var(--chart-1)" }}
+            />
+            Growing
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <span
+              className="h-2 w-2 rounded-full"
+              style={{ backgroundColor: "var(--chart-2)" }}
+            />
+            Declining
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <span
+              className="h-2 w-2 rounded-full"
+              style={{ backgroundColor: "var(--chart-4)" }}
+            />
+            Monopoly
+          </span>
+        </div>
         <ResponsiveContainer width="100%" height={280}>
           <ScatterChart margin={{ left: 0, right: 16, top: 8, bottom: 20 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
