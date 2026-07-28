@@ -102,12 +102,12 @@ src/
 │   └── api.ts                # Backend API calls
 ├── components/
 │   ├── Header.tsx            # Top navigation
-│   ├── Sidebar.tsx           # Left navigation
+│   ├── AppSidebar.tsx        # Left navigation
 │   ├── KpiCard.tsx           # Metric cards
 │   ├── UploadSection.tsx     # File upload
 │   ├── FilterPanel.tsx       # Filter controls
 │   ├── ResultsTable.tsx      # Data table
-│   └── ChartPanel.tsx        # Recharts visualizations
+│   └── OverviewCharts.tsx    # Recharts visualizations
 └── pages/
     ├── Dashboard.tsx         # Main page logic
     └── RootLayout.tsx        # Root wrapper
@@ -118,7 +118,7 @@ src/
 - **Colors**: oklch color system defined in src/styles.css
 - **Dark Theme**: Default (no light mode)
 - **Framework**: Tailwind CSS
-- **Component Library**: shadcn/ui (minimal use)
+- **Component Library**: None — hand-built components
 - **Icons**: lucide-react
 
 ## Performance
@@ -215,9 +215,9 @@ For issues:
 - Separation of concerns
 - Frontend focused on display only
 
-**Why Minimal Component Library?**
+**Why No Component Library?**
 
-- shadcn/ui was creating overlay issues
+- shadcn/ui was creating overlay issues, so it was removed entirely
 - Tailwind CSS sufficient for styling
 - Custom components lightweight
 - Full control over behavior

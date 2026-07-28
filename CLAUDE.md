@@ -38,11 +38,10 @@ KpiCard / ResultsTable / ChartPanel rendering
 
 ### Frontend (`src/`)
 
-- **Entry point**: `src/client.tsx` renders into `#root`
-- **Routing**: TanStack Router; `src/routes/index.tsx` is the root route (note: components there are partially commented out during an ongoing debug — the active UI lives in `src/pages/Dashboard.tsx`)
+- **Entry point**: `src/client.tsx` renders `RootLayout` into `#root`; `src/pages/RootLayout.tsx` renders `Dashboard` directly — there is no router
 - **State**: Local React state only — no Redux/Context. `Dashboard.tsx` owns `rows`, `analytics`, and `filters`; passes them down as props
-- **UI library**: shadcn/ui components (Radix-based) in `src/components/ui/`; chart components use Recharts
-- **Styling**: Tailwind CSS v4 (Vite plugin, no `tailwind.config.js` needed for v4), dark theme by default with oklch design tokens in `src/styles.css`
+- **UI library**: Hand-built components in `src/components/` (no component library); chart components use Recharts
+- **Styling**: Tailwind CSS v4, configured via `@theme` in `src/styles.css` (no `tailwind.config.js` needed for v4), dark theme by default with oklch design tokens
 
 Key source directories:
 | Path | Purpose |
@@ -50,8 +49,7 @@ Key source directories:
 | `src/types/index.ts` | All TypeScript interfaces (`DatasetRow`, `MoleculeAnalytics`, `FilterParams`, `UploadResponse`) |
 | `src/services/api.ts` | `uploadFile()` — the only backend call |
 | `src/pages/Dashboard.tsx` | Main page: owns all state, wires UploadSection → filters → display |
-| `src/components/` | Feature components (UploadSection, FilterPanel, ResultsTable, ChartPanel, KpiCard) |
-| `src/components/dashboard/` | Older shadcn-style versions of the same components (partially superseded) |
+| `src/components/` | Feature components: `AppSidebar`, `Header`, `KpiCard`, `UploadSection`, `FilterPanel`, `ResultsTable`, `OverviewCharts` |
 
 ### Backend (`backend/`)
 
@@ -80,10 +78,7 @@ Single-file FastAPI app: `backend/main.py`
 | ------------------ | ------------------------------------------ |
 | Frontend framework | React 19 + TypeScript 5.8                  |
 | Build              | Vite 7                                     |
-| Routing            | TanStack Router 1.x                        |
-| Data fetching      | TanStack Query 5                           |
-| Styling            | Tailwind CSS 4, shadcn/ui, Radix UI        |
+| Styling            | Tailwind CSS 4                             |
 | Charts             | Recharts 3                                 |
-| Forms              | React Hook Form + Zod                      |
 | Backend            | FastAPI + uvicorn                          |
 | Excel parsing      | openpyxl (backend), xlsx (frontend export) |

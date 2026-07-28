@@ -6,7 +6,7 @@ Users upload an Excel file, the FastAPI backend computes molecule-level metrics,
 
 ## Tech Stack
 
-- **Frontend:** React 19, TypeScript, Vite, Tailwind CSS, shadcn/ui, Recharts
+- **Frontend:** React 19, TypeScript, Vite, Tailwind CSS, Recharts
 - **Backend:** FastAPI, Uvicorn, openpyxl
 
 ## Repository Structure

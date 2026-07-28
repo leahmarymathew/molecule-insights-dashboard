@@ -34,7 +34,7 @@ src/
 
 ### 2. **Minimal Dependencies**
 
-- React, TypeScript, Tailwind, shadcn/ui, Recharts
+- React, TypeScript, Tailwind, Recharts
 - No unnecessary providers, contexts, or abstractions
 - Single-file components when possible
 - No complex state management
@@ -175,19 +175,19 @@ Summary statistics
 - `components/ui/dropdown-menu.tsx`
 - `components/ui/menubar.tsx`
 - `components/dashboard/ScreeningPanel.tsx` (replaced with FilterPanel)
-- `components/dashboard/ActivityChart.tsx` (replaced with ChartPanel)
-- `components/dashboard/AppSidebar.tsx` (replaced with Sidebar)
+- `components/dashboard/ActivityChart.tsx` (replaced with OverviewCharts)
+- `components/dashboard/AppSidebar.tsx` (replaced with the top-level AppSidebar)
 - `lib/analyzeMolecules.ts` (logic moved to backend)
 - `lib/parseDataset.ts` (logic moved to backend)
 - `hooks/use-mobile.tsx`
 - All TanStack Router files
 - All error boundary complexity
+- `components/ui/` (shadcn/ui — removed entirely, all components hand-built)
+- `components.json`, `bun.lock` (shadcn/Bun tooling no longer used)
 
 ### Kept
 
-- `styles.css` (design tokens)
-- Basic Tailwind config
-- `components/ui/` (only Input, Button used)
+- `styles.css` (design tokens, Tailwind v4 `@theme` config)
 - TypeScript setup
 - Vite config
 
