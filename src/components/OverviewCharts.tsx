@@ -73,7 +73,7 @@ export function OverviewCharts({ analytics }: Props) {
   return (
     <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
       {/* Top 10 by Revenue 2025 — horizontal bar */}
-      <div className="rounded-lg border border-border/60 bg-card p-4">
+      <div className="rounded-lg border border-border bg-card p-4">
         <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-4">
           Top 10 — Revenue 2025
         </h3>
@@ -111,7 +111,7 @@ export function OverviewCharts({ analytics }: Props) {
       </div>
 
       {/* Competition vs STD CAGR — scatter */}
-      <div className="rounded-lg border border-border/60 bg-card p-4">
+      <div className="rounded-lg border border-border bg-card p-4">
         <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-0.5">
           Competition vs STD CAGR
         </h3>
@@ -192,7 +192,7 @@ export function OverviewCharts({ analytics }: Props) {
       </div>
 
       {/* Revenue Trend — top 8, full width */}
-      <div className="rounded-lg border border-border/60 bg-card p-4 xl:col-span-2">
+      <div className="rounded-lg border border-border bg-card p-4 xl:col-span-2">
         <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-4">
           Revenue Trend — Top 8 Molecules (2023–2025)
         </h3>

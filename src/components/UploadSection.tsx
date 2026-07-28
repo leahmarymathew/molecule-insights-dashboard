@@ -63,7 +63,7 @@ export function UploadSection({ onUploadComplete, currentSummary }: UploadSectio
   // Compact bar shown after data is loaded
   if (currentSummary) {
     return (
-      <div className="rounded-lg border border-border/60 bg-card px-4 py-2.5 flex items-center gap-4 min-w-0">
+      <div className="rounded-lg border border-border bg-card px-4 py-2.5 flex items-center gap-4 min-w-0">
         {fileInput}
         {loading ? (
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -73,7 +73,7 @@ export function UploadSection({ onUploadComplete, currentSummary }: UploadSectio
         ) : (
           <>
             <div className="flex items-center gap-2 shrink-0">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shrink-0" />
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" />
               <span className="text-xs font-medium text-foreground truncate max-w-52">
                 {lastFile ?? "Dataset loaded"}
               </span>
@@ -93,7 +93,7 @@ export function UploadSection({ onUploadComplete, currentSummary }: UploadSectio
             )}
             <button
               onClick={triggerInput}
-              className="ml-auto flex items-center gap-1.5 rounded-md border border-border/60 px-2.5 py-1 text-xs text-muted-foreground hover:text-foreground hover:border-border transition-colors shrink-0"
+              className="ml-auto flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors shrink-0"
             >
               <Upload className="h-3 w-3" />
               Replace
@@ -123,7 +123,7 @@ export function UploadSection({ onUploadComplete, currentSummary }: UploadSectio
         "rounded-lg border-2 border-dashed flex flex-col items-center justify-center gap-2.5 py-14 cursor-pointer transition-colors select-none",
         isDragging
           ? "border-primary/60 bg-primary/5"
-          : "border-border/40 hover:border-primary/30 hover:bg-primary/[0.02]",
+          : "border-border hover:border-primary/40 hover:bg-primary/[0.02]",
         loading && "pointer-events-none opacity-60",
       )}
     >

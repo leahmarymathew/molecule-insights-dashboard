@@ -1,5 +1,5 @@
-import { useState, useMemo, useEffect } from "react";
-import { ArrowUpDown, ArrowUp, ArrowDown, FlaskConical } from "lucide-react";
+import { useState, useMemo, useEffect, useRef } from "react";
+import { ArrowUpDown, ArrowUp, ArrowDown, FlaskConical, Columns3 } from "lucide-react";
 import type { MoleculeAnalytics, SortField, SortDirection } from "@/types";
 import { cn } from "@/lib/utils";
 
@@ -8,32 +8,33 @@ interface Column {
   label: string;
   align?: "right" | "center";
   sortable?: boolean;
+  defaultVisible?: boolean;
 }
 
 const GROWTH_COLUMNS: Column[] = [
-  { key: "Molecule", label: "Molecule" },
-  { key: "Competition_Count", label: "Competition", align: "right" },
+  { key: "Molecule", label: "Molecule", defaultVisible: true },
+  { key: "Competition_Count", label: "Competition", align: "right", defaultVisible: true },
   { key: "Revenue_2023", label: "Revenue 2023", align: "right" },
   { key: "Revenue_2024", label: "Revenue 2024", align: "right" },
-  { key: "Revenue_2025", label: "Revenue 2025", align: "right" },
+  { key: "Revenue_2025", label: "Revenue 2025", align: "right", defaultVisible: true },
   { key: "STD_2023", label: "STD 2023", align: "right" },
   { key: "STD_2024", label: "STD 2024", align: "right" },
-  { key: "STD_2025", label: "STD 2025", align: "right" },
-  { key: "STD_CAGR", label: "STD CAGR", align: "right" },
-  { key: "Flags", label: "Flags", sortable: false },
+  { key: "STD_2025", label: "STD 2025", align: "right", defaultVisible: true },
+  { key: "STD_CAGR", label: "STD CAGR", align: "right", defaultVisible: true },
+  { key: "Flags", label: "Flags", sortable: false, defaultVisible: true },
 ];
 
 const REVENUE_COLUMNS: Column[] = [
-  { key: "Molecule", label: "Molecule" },
-  { key: "Opportunity_Score", label: "Opp. Score", align: "right" },
-  { key: "Competition_Count", label: "Competition", align: "right" },
-  { key: "Dominance_Ratio", label: "Dominance", align: "right" },
+  { key: "Molecule", label: "Molecule", defaultVisible: true },
+  { key: "Opportunity_Score", label: "Opp. Score", align: "right", defaultVisible: true },
+  { key: "Competition_Count", label: "Competition", align: "right", defaultVisible: true },
+  { key: "Dominance_Ratio", label: "Dominance", align: "right", defaultVisible: true },
   { key: "Revenue_2023", label: "Revenue 2023", align: "right" },
   { key: "Revenue_2024", label: "Revenue 2024", align: "right" },
-  { key: "Revenue_2025", label: "Revenue 2025", align: "right" },
+  { key: "Revenue_2025", label: "Revenue 2025", align: "right", defaultVisible: true },
   { key: "STD_CAGR", label: "STD CAGR", align: "right" },
-  { key: "Revenue_CAGR", label: "Rev CAGR", align: "right" },
-  { key: "Flags", label: "Flags", sortable: false },
+  { key: "Revenue_CAGR", label: "Rev CAGR", align: "right", defaultVisible: true },
+  { key: "Flags", label: "Flags", sortable: false, defaultVisible: true },
 ];
 
 function fmtRevenue(v: number) {
@@ -45,13 +46,13 @@ function fmtCagr(v: number) {
 }
 
 const FLAG_STYLES: Record<string, string> = {
-  SINGLE_BRAND: "bg-zinc-400/10 text-zinc-400 border-zinc-400/20",
-  DEAD: "bg-red-900/20 text-red-300 border-red-300/20",
-  EXITING: "bg-red-400/10 text-red-400 border-red-400/20",
-  COLLAPSING: "bg-orange-400/10 text-orange-400 border-orange-400/20",
-  SPIKE: "bg-yellow-400/10 text-yellow-400 border-yellow-400/20",
-  VOL_DOWN_REV_UP: "bg-purple-400/10 text-purple-400 border-purple-400/20",
-  HIGH_DOMINANCE: "bg-amber-400/10 text-amber-400 border-amber-400/20",
+  SINGLE_BRAND: "bg-zinc-50 text-zinc-600 border-zinc-200",
+  DEAD: "bg-red-100 text-red-700 border-red-200",
+  EXITING: "bg-red-50 text-red-600 border-red-200",
+  COLLAPSING: "bg-orange-50 text-orange-700 border-orange-200",
+  SPIKE: "bg-yellow-50 text-yellow-700 border-yellow-200",
+  VOL_DOWN_REV_UP: "bg-violet-50 text-violet-700 border-violet-200",
+  HIGH_DOMINANCE: "bg-amber-50 text-amber-700 border-amber-200",
 };
 
 const FLAG_LABELS: Record<string, string> = {
@@ -79,9 +80,9 @@ function renderCell(col: SortField | "Flags", m: MoleculeAnalytics) {
           className={cn(
             "px-4 py-2.5 text-right tabular-nums font-semibold",
             m.Opportunity_Score >= 60
-              ? "text-emerald-400"
+              ? "text-emerald-600"
               : m.Opportunity_Score >= 40
-                ? "text-yellow-400"
+                ? "text-amber-600"
                 : "text-muted-foreground",
           )}
         >
@@ -98,7 +99,7 @@ function renderCell(col: SortField | "Flags", m: MoleculeAnalytics) {
       return (
         <td key={col} className="px-4 py-2.5 text-center">
           {m.Monopoly_Flag ? (
-            <span className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium bg-red-400/10 text-red-400 border border-red-400/20 whitespace-nowrap">
+            <span className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium bg-red-50 text-red-700 border border-red-200 whitespace-nowrap">
               Monopoly
             </span>
           ) : (
@@ -158,7 +159,7 @@ function renderCell(col: SortField | "Flags", m: MoleculeAnalytics) {
           key={col}
           className={cn(
             "px-4 py-2.5 text-right tabular-nums font-medium",
-            v > 0 ? "text-emerald-400" : "text-red-400",
+            v > 0 ? "text-emerald-600" : "text-red-600",
           )}
         >
           {fmtCagr(v)}
@@ -174,6 +175,10 @@ function renderCell(col: SortField | "Flags", m: MoleculeAnalytics) {
   }
 }
 
+function defaultVisibility(columns: Column[]) {
+  return Object.fromEntries(columns.map((c) => [c.key, c.defaultVisible === true]));
+}
+
 export function ResultsTable({
   data,
   analysisMode,
@@ -181,7 +186,14 @@ export function ResultsTable({
   data: MoleculeAnalytics[];
   analysisMode: "growth" | "revenue";
 }) {
-  const columns = analysisMode === "growth" ? GROWTH_COLUMNS : REVENUE_COLUMNS;
+  const allColumns = analysisMode === "growth" ? GROWTH_COLUMNS : REVENUE_COLUMNS;
+  const optionalColumns = allColumns.filter((c) => !c.defaultVisible);
+
+  const [visible, setVisible] = useState<Record<string, boolean>>(() =>
+    defaultVisibility(allColumns),
+  );
+  const [columnsMenuOpen, setColumnsMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
   const [sortField, setSortField] = useState<SortField>(
     analysisMode === "growth" ? "STD_CAGR" : "Opportunity_Score",
   );
@@ -190,7 +202,22 @@ export function ResultsTable({
   useEffect(() => {
     setSortField(analysisMode === "growth" ? "STD_CAGR" : "Opportunity_Score");
     setSortDir("desc");
+    setVisible(defaultVisibility(allColumns));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [analysisMode]);
+
+  useEffect(() => {
+    if (!columnsMenuOpen) return;
+    function onClickOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setColumnsMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, [columnsMenuOpen]);
+
+  const columns = allColumns.filter((c) => visible[c.key]);
 
   function toggleSort(field: SortField | "Flags") {
     if (field === "Flags") return;
@@ -222,9 +249,39 @@ export function ResultsTable({
     [data, sortField, sortDir],
   );
 
+  const columnsToggle = optionalColumns.length > 0 && (
+    <div className="relative print:hidden" ref={menuRef}>
+      <button
+        onClick={() => setColumnsMenuOpen((v) => !v)}
+        className="flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-xs font-medium text-foreground hover:bg-secondary transition-colors"
+      >
+        <Columns3 className="h-3.5 w-3.5" />
+        Columns
+      </button>
+      {columnsMenuOpen && (
+        <div className="absolute right-0 z-10 mt-1 w-48 rounded-md border border-border bg-popover p-2 shadow-md">
+          {optionalColumns.map((c) => (
+            <label
+              key={c.key}
+              className="flex items-center gap-2 rounded px-2 py-1.5 text-xs text-popover-foreground hover:bg-secondary cursor-pointer"
+            >
+              <input
+                type="checkbox"
+                checked={visible[c.key] ?? false}
+                onChange={(e) => setVisible((v) => ({ ...v, [c.key]: e.target.checked }))}
+                className="h-3.5 w-3.5 accent-primary"
+              />
+              {c.label}
+            </label>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
   if (!data.length) {
     return (
-      <div className="rounded-lg border border-border/60 bg-card p-12 flex flex-col items-center gap-3 text-center">
+      <div className="rounded-lg border border-border bg-card p-12 flex flex-col items-center gap-3 text-center">
         <FlaskConical className="h-10 w-10 text-muted-foreground opacity-30" />
         <p className="text-sm text-muted-foreground">No molecules match the current filters.</p>
       </div>
@@ -232,11 +289,14 @@ export function ResultsTable({
   }
 
   return (
-    <div className="rounded-lg border border-border/60 bg-card overflow-hidden">
+    <div className="rounded-lg border border-border bg-card overflow-hidden">
+      <div className="flex items-center justify-end gap-2 px-4 py-2 border-b border-border print:hidden">
+        {columnsToggle}
+      </div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-border/60 bg-secondary/20">
+            <tr className="border-b border-border bg-secondary/40">
               {columns.map(({ key, label, align, sortable = true }) => (
                 <th
                   key={key}
@@ -288,8 +348,8 @@ export function ResultsTable({
               <tr
                 key={m.Molecule}
                 className={cn(
-                  "border-b border-border/40 hover:bg-secondary/20 transition-colors",
-                  i % 2 === 1 && "bg-secondary/10",
+                  "border-b border-border/60 hover:bg-secondary/30 transition-colors",
+                  i % 2 === 1 && "bg-secondary/15",
                 )}
               >
                 {columns.map(({ key }) => renderCell(key, m))}
@@ -298,7 +358,7 @@ export function ResultsTable({
           </tbody>
         </table>
       </div>
-      <div className="px-4 py-2 border-t border-border/40 bg-secondary/10">
+      <div className="px-4 py-2 border-t border-border bg-secondary/15">
         <span className="text-xs text-muted-foreground">
           {data.length} molecule{data.length !== 1 ? "s" : ""}
         </span>
