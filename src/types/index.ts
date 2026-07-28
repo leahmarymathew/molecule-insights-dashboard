@@ -52,10 +52,12 @@ export interface FilterParams {
   minRevenue2024: number;
   minRevenue2025: number;
   minRevenueCagr: number;
+  minOpportunityScore: number;
+  maxDominanceRatio: number;
   monopolyMode: "all" | "monopoly_only" | "exclude_monopoly";
 }
 
-export type NavSection = "overview" | "molecules" | "reports";
+export type NavSection = "overview" | "molecules";
 export type SortField =
   | "Molecule"
   | "Opportunity_Score"
