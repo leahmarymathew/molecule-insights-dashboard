@@ -284,33 +284,14 @@ export default function Dashboard() {
                 <div className="flex items-center gap-2 pb-2">
                   <button
                     onClick={() =>
-                      exportCsv(
-                        `molecules_${activeAnalysis}_filtered.csv`,
-                        filtered,
-                        activeAnalysis,
-                      )
+                      exportCsv(`molecules_${activeAnalysis}.csv`, filtered, activeAnalysis)
                     }
                     disabled={!filtered.length}
                     title={!filtered.length ? "No molecules match the current filters" : undefined}
                     className="flex items-center gap-1.5 whitespace-nowrap rounded-md border border-border px-2.5 py-1.5 text-xs font-medium text-foreground hover:bg-secondary transition-colors disabled:opacity-40 disabled:pointer-events-none"
                   >
                     <Download className="h-3.5 w-3.5" />
-                    Export Filtered ({filtered.length})
-                  </button>
-                  <button
-                    onClick={() =>
-                      exportCsv(
-                        `molecules_${activeAnalysis}_all.csv`,
-                        currentAnalysisData,
-                        activeAnalysis,
-                      )
-                    }
-                    disabled={!currentAnalysisData.length}
-                    title={!currentAnalysisData.length ? "No data loaded" : undefined}
-                    className="flex items-center gap-1.5 whitespace-nowrap rounded-md border border-border px-2.5 py-1.5 text-xs font-medium text-foreground hover:bg-secondary transition-colors disabled:opacity-40 disabled:pointer-events-none"
-                  >
-                    <Download className="h-3.5 w-3.5" />
-                    Export All ({currentAnalysisData.length})
+                    Export ({filtered.length})
                   </button>
                 </div>
               </div>
