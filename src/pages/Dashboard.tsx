@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { FlaskConical, Target, ShieldAlert, TrendingUp, Download } from "lucide-react";
+import { Trophy, Target, ShieldAlert, TrendingUp, Download } from "lucide-react";
 import * as XLSX from "xlsx";
 import type { MoleculeAnalytics, FilterParams, UploadResponse, NavSection, Analysis } from "@/types";
 import { AppSidebar } from "@/components/AppSidebar";
@@ -162,14 +162,24 @@ export default function Dashboard() {
     [currentAnalysisData, filters],
   );
 
-  const kpis = useMemo(() => {
-    if (!filtered.length) return null;
-    const highGrowth = filtered.filter((m) => m.STD_CAGR > 0).length;
-    const monopolies = filtered.filter((m) => m.Monopoly_Flag).length;
-    const avgCagr = filtered.reduce((s, m) => s + m.STD_CAGR, 0) / filtered.length;
-    const totalRev = filtered.reduce((s, m) => s + m.Revenue_2025, 0);
-    return { highGrowth, monopolies, avgCagr, totalRev };
-  }, [filtered]);
+  // Overview is a stable "where should I invest" snapshot — it intentionally
+  // ignores the Molecules tab's filters/mode and always sources from the
+  // opportunity-ranked, monopoly-excluded dataset (already sorted desc by
+  // Opportunity_Score by the backend).
+  const opportunityData = useMemo(
+    () => analysis2Revenue?.results || analytics,
+    [analysis2Revenue, analytics],
+  );
+
+  const overviewKpis = useMemo(() => {
+    if (!opportunityData.length) return null;
+    const topOpportunity = opportunityData[0];
+    const highOpportunityCount = opportunityData.filter((m) => m.Opportunity_Score >= 60).length;
+    const monopolies = analytics.filter((m) => m.Monopoly_Flag).length;
+    const avgOpportunityScore =
+      opportunityData.reduce((s, m) => s + m.Opportunity_Score, 0) / opportunityData.length;
+    return { topOpportunity, highOpportunityCount, monopolies, avgOpportunityScore };
+  }, [opportunityData, analytics]);
 
   return (
     <div className="flex h-screen bg-background overflow-hidden">
@@ -215,36 +225,47 @@ export default function Dashboard() {
                 <>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     <KpiCard
-                      label="Total Molecules"
-                      value={filtered.length.toString()}
-                      icon={FlaskConical}
-                      hint={`${summary?.uniqueProducts ?? 0} unique brands`}
+                      label="Top Opportunity"
+                      value={overviewKpis?.topOpportunity.Molecule ?? "—"}
+                      icon={Trophy}
+                      hint={
+                        overviewKpis
+                          ? `Score ${overviewKpis.topOpportunity.Opportunity_Score.toFixed(1)} · ${fmtRevenue(overviewKpis.topOpportunity.Revenue_2025)} revenue`
+                          : "Best-ranked molecule"
+                      }
+                      highlight="green"
                     />
                     <KpiCard
-                      label="Growing Molecules"
-                      value={kpis ? kpis.highGrowth.toString() : "—"}
+                      label="High-Opportunity"
+                      value={overviewKpis ? overviewKpis.highOpportunityCount.toString() : "—"}
                       icon={Target}
-                      hint="Positive STD CAGR"
-                      highlight={kpis && kpis.highGrowth > 0 ? "green" : undefined}
+                      hint="Opportunity Score ≥ 60"
+                      highlight={overviewKpis && overviewKpis.highOpportunityCount > 0 ? "green" : undefined}
                     />
                     <KpiCard
                       label="Monopoly Molecules"
-                      value={kpis ? kpis.monopolies.toString() : "—"}
+                      value={overviewKpis ? overviewKpis.monopolies.toString() : "—"}
                       icon={ShieldAlert}
-                      hint="Dominance Ratio ≥ 80%"
-                      highlight={kpis && kpis.monopolies > 0 ? "red" : undefined}
+                      hint="Excluded from opportunities"
+                      highlight={overviewKpis && overviewKpis.monopolies > 0 ? "red" : undefined}
                     />
                     <KpiCard
-                      label="Avg STD CAGR"
-                      value={kpis ? `${kpis.avgCagr.toFixed(1)}%` : "—"}
+                      label="Avg Opportunity Score"
+                      value={overviewKpis ? overviewKpis.avgOpportunityScore.toFixed(1) : "—"}
                       icon={TrendingUp}
-                      hint={
-                        kpis ? `Total revenue: ${fmtRevenue(kpis.totalRev)}` : "2-year unit growth"
+                      hint={overviewKpis ? `Across ${opportunityData.length} molecules` : "0–100 scale"}
+                      highlight={
+                        overviewKpis
+                          ? overviewKpis.avgOpportunityScore >= 60
+                            ? "green"
+                            : overviewKpis.avgOpportunityScore >= 40
+                              ? "amber"
+                              : undefined
+                          : undefined
                       }
-                      highlight={kpis ? (kpis.avgCagr >= 0 ? "green" : "red") : undefined}
                     />
                   </div>
-                  <OverviewCharts analytics={filtered} />
+                  <OverviewCharts opportunities={opportunityData} landscape={analytics} />
                 </>
               )}
             </div>
