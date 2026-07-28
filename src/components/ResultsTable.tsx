@@ -250,7 +250,7 @@ export function ResultsTable({
   );
 
   const columnsToggle = optionalColumns.length > 0 && (
-    <div className="relative print:hidden" ref={menuRef}>
+    <div className="relative" ref={menuRef}>
       <button
         onClick={() => setColumnsMenuOpen((v) => !v)}
         className="flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-xs font-medium text-foreground hover:bg-secondary transition-colors"
@@ -290,7 +290,7 @@ export function ResultsTable({
 
   return (
     <div className="rounded-lg border border-border bg-card overflow-hidden">
-      <div className="flex items-center justify-end gap-2 px-4 py-2 border-b border-border print:hidden">
+      <div className="flex items-center justify-end gap-2 px-4 py-2 border-b border-border">
         {columnsToggle}
       </div>
       <div className="overflow-x-auto">

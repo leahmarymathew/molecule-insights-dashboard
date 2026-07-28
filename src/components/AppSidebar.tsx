@@ -25,7 +25,7 @@ export function AppSidebar({
   return (
     <aside
       className={cn(
-        "flex flex-col shrink-0 border-r border-sidebar-border bg-sidebar h-full transition-[width] duration-150 print:hidden",
+        "flex flex-col shrink-0 border-r border-sidebar-border bg-sidebar h-full transition-[width] duration-150",
         collapsed ? "w-14" : "w-56",
       )}
     >
