@@ -288,7 +288,7 @@ export default function Dashboard() {
                     }
                     disabled={!filtered.length}
                     title={!filtered.length ? "No molecules match the current filters" : undefined}
-                    className="flex items-center gap-1.5 whitespace-nowrap rounded-md border border-border px-2.5 py-1.5 text-xs font-medium text-foreground hover:bg-secondary transition-colors disabled:opacity-40 disabled:pointer-events-none"
+                    className="flex items-center gap-1.5 whitespace-nowrap rounded-md border border-border-strong bg-card px-2.5 py-1.5 text-xs font-medium text-foreground shadow-sm hover:bg-secondary hover:border-foreground/40 transition-colors disabled:opacity-40 disabled:pointer-events-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     <Download className="h-3.5 w-3.5" />
                     Export ({filtered.length})
