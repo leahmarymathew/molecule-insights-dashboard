@@ -90,6 +90,7 @@ export default function Dashboard() {
   const [analysis2Revenue, setAnalysis2Revenue] = useState<Analysis | null>(null);
   const [activeAnalysis, setActiveAnalysis] = useState<"growth" | "revenue">("growth");
   const [filters, setFilters] = useState<FilterParams>(DEFAULT_FILTERS);
+  const [uploading, setUploading] = useState(false);
   const [summary, setSummary] = useState<{
     totalRows: number;
     uniqueMolecules: number;
@@ -187,7 +188,28 @@ export default function Dashboard() {
           {/* OVERVIEW */}
           {activeSection === "overview" && (
             <div className="p-6 space-y-6">
-              <UploadSection onUploadComplete={handleUploadComplete} currentSummary={summary} />
+              <UploadSection
+                onUploadComplete={handleUploadComplete}
+                onLoadingChange={setUploading}
+                currentSummary={summary}
+              />
+
+              {uploading && analytics.length === 0 && (
+                <div className="space-y-4 animate-pulse" aria-hidden="true">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {Array.from({ length: 4 }).map((_, i) => (
+                      <div key={i} className="rounded-lg border border-border bg-card p-4 h-24">
+                        <div className="h-3 w-20 rounded bg-secondary mb-3" />
+                        <div className="h-6 w-12 rounded bg-secondary" />
+                      </div>
+                    ))}
+                  </div>
+                  <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                    <div className="rounded-lg border border-border bg-card p-4 h-64 bg-secondary/20" />
+                    <div className="rounded-lg border border-border bg-card p-4 h-64 bg-secondary/20" />
+                  </div>
+                </div>
+              )}
 
               {analytics.length > 0 && (
                 <>
