@@ -8,34 +8,41 @@ interface Column {
   label: string;
   align?: "right" | "center";
   sortable?: boolean;
-  defaultVisible?: boolean;
 }
 
-const GROWTH_COLUMNS: Column[] = [
-  { key: "Molecule", label: "Molecule", defaultVisible: true },
-  { key: "Competition_Count", label: "Competition", align: "right", defaultVisible: true },
+// Every field the backend returns for a molecule, in both Growth and Revenue
+// analyses (they share the exact same result shape — see backend/main.py's
+// `compute_analytics`). Both modes can show any of these; only the
+// default-visible subset differs per mode.
+const ALL_COLUMNS: Column[] = [
+  { key: "Molecule", label: "Molecule" },
+  { key: "Opportunity_Score", label: "Opp. Score", align: "right" },
+  { key: "Competition_Count", label: "Competition", align: "right" },
+  { key: "Dominance_Ratio", label: "Dominance", align: "right" },
+  { key: "Monopoly_Flag", label: "Monopoly", align: "center" },
   { key: "Revenue_2023", label: "Revenue 2023", align: "right" },
   { key: "Revenue_2024", label: "Revenue 2024", align: "right" },
-  { key: "Revenue_2025", label: "Revenue 2025", align: "right", defaultVisible: true },
+  { key: "Revenue_2025", label: "Revenue 2025", align: "right" },
   { key: "STD_2023", label: "STD 2023", align: "right" },
   { key: "STD_2024", label: "STD 2024", align: "right" },
-  { key: "STD_2025", label: "STD 2025", align: "right", defaultVisible: true },
-  { key: "STD_CAGR", label: "STD CAGR", align: "right", defaultVisible: true },
-  { key: "Flags", label: "Flags", sortable: false, defaultVisible: true },
+  { key: "STD_2025", label: "STD 2025", align: "right" },
+  { key: "STD_CAGR", label: "STD CAGR", align: "right" },
+  { key: "Revenue_CAGR", label: "Rev CAGR", align: "right" },
+  { key: "Flags", label: "Flags", sortable: false },
 ];
 
-const REVENUE_COLUMNS: Column[] = [
-  { key: "Molecule", label: "Molecule", defaultVisible: true },
-  { key: "Opportunity_Score", label: "Opp. Score", align: "right", defaultVisible: true },
-  { key: "Competition_Count", label: "Competition", align: "right", defaultVisible: true },
-  { key: "Dominance_Ratio", label: "Dominance", align: "right", defaultVisible: true },
-  { key: "Revenue_2023", label: "Revenue 2023", align: "right" },
-  { key: "Revenue_2024", label: "Revenue 2024", align: "right" },
-  { key: "Revenue_2025", label: "Revenue 2025", align: "right", defaultVisible: true },
-  { key: "STD_CAGR", label: "STD CAGR", align: "right" },
-  { key: "Revenue_CAGR", label: "Rev CAGR", align: "right", defaultVisible: true },
-  { key: "Flags", label: "Flags", sortable: false, defaultVisible: true },
-];
+const DEFAULT_VISIBLE: Record<"growth" | "revenue", Set<Column["key"]>> = {
+  growth: new Set(["Molecule", "Competition_Count", "Revenue_2025", "STD_2025", "STD_CAGR", "Flags"]),
+  revenue: new Set([
+    "Molecule",
+    "Opportunity_Score",
+    "Competition_Count",
+    "Dominance_Ratio",
+    "Revenue_2025",
+    "Revenue_CAGR",
+    "Flags",
+  ]),
+};
 
 function fmtRevenue(v: number) {
   return Math.round(v).toLocaleString();
@@ -179,8 +186,9 @@ function renderCell(col: SortField | "Flags", m: MoleculeAnalytics) {
   }
 }
 
-function defaultVisibility(columns: Column[]) {
-  return Object.fromEntries(columns.map((c) => [c.key, c.defaultVisible === true]));
+function defaultVisibility(mode: "growth" | "revenue") {
+  const defaults = DEFAULT_VISIBLE[mode];
+  return Object.fromEntries(ALL_COLUMNS.map((c) => [c.key, defaults.has(c.key)]));
 }
 
 export function ResultsTable({
@@ -192,11 +200,10 @@ export function ResultsTable({
   analysisMode: "growth" | "revenue";
   onResetFilters?: () => void;
 }) {
-  const allColumns = analysisMode === "growth" ? GROWTH_COLUMNS : REVENUE_COLUMNS;
-  const optionalColumns = allColumns.filter((c) => !c.defaultVisible);
+  const optionalColumns = ALL_COLUMNS.filter((c) => !DEFAULT_VISIBLE[analysisMode].has(c.key));
 
   const [visible, setVisible] = useState<Record<string, boolean>>(() =>
-    defaultVisibility(allColumns),
+    defaultVisibility(analysisMode),
   );
   const [columnsMenuOpen, setColumnsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -209,8 +216,7 @@ export function ResultsTable({
   useEffect(() => {
     setSortField(analysisMode === "growth" ? "STD_CAGR" : "Opportunity_Score");
     setSortDir("desc");
-    setVisible(defaultVisibility(allColumns));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    setVisible(defaultVisibility(analysisMode));
   }, [analysisMode]);
 
   useEffect(() => {
@@ -234,7 +240,7 @@ export function ResultsTable({
     };
   }, [columnsMenuOpen]);
 
-  const columns = allColumns.filter((c) => visible[c.key]);
+  const columns = ALL_COLUMNS.filter((c) => visible[c.key]);
 
   function toggleSort(field: SortField | "Flags") {
     if (field === "Flags") return;
