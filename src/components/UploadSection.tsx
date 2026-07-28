@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 
 interface UploadSectionProps {
   onUploadComplete: (res: UploadResponse) => void;
+  onLoadingChange?: (loading: boolean) => void;
   currentSummary: {
     totalRows: number;
     uniqueMolecules: number;
@@ -13,7 +14,11 @@ interface UploadSectionProps {
   } | null;
 }
 
-export function UploadSection({ onUploadComplete, currentSummary }: UploadSectionProps) {
+export function UploadSection({
+  onUploadComplete,
+  onLoadingChange,
+  currentSummary,
+}: UploadSectionProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -28,6 +33,7 @@ export function UploadSection({ onUploadComplete, currentSummary }: UploadSectio
       }
       setError(null);
       setLoading(true);
+      onLoadingChange?.(true);
       setLastFile(file.name);
       try {
         const result = await uploadFile(file);
@@ -39,9 +45,10 @@ export function UploadSection({ onUploadComplete, currentSummary }: UploadSectio
         );
       } finally {
         setLoading(false);
+        onLoadingChange?.(false);
       }
     },
-    [onUploadComplete],
+    [onUploadComplete, onLoadingChange],
   );
 
   const triggerInput = () => !loading && inputRef.current?.click();
@@ -107,61 +114,70 @@ export function UploadSection({ onUploadComplete, currentSummary }: UploadSectio
 
   // Full drop zone shown when no data is loaded yet
   return (
-    <div
-      role="button"
-      tabIndex={0}
-      aria-label="Upload IQVIA Excel file, drop a file here or press Enter to browse"
-      onDragOver={(e) => {
-        e.preventDefault();
-        setIsDragging(true);
-      }}
-      onDragLeave={() => setIsDragging(false)}
-      onDrop={(e) => {
-        e.preventDefault();
-        setIsDragging(false);
-        const file = e.dataTransfer.files[0];
-        if (file) handleFile(file);
-      }}
-      onClick={triggerInput}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
+    <div className="space-y-3">
+      <div
+        role="button"
+        tabIndex={0}
+        aria-label="Upload IQVIA Excel file, drop a file here or press Enter to browse"
+        onDragOver={(e) => {
           e.preventDefault();
-          triggerInput();
-        }
-      }}
-      className={cn(
-        "rounded-lg border-2 border-dashed flex flex-col items-center justify-center gap-2.5 py-14 cursor-pointer transition-colors select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-        isDragging
-          ? "border-primary/60 bg-primary/5"
-          : "border-border hover:border-primary/40 hover:bg-primary/[0.02]",
-        loading && "pointer-events-none opacity-60",
-      )}
-    >
-      {fileInput}
-      {loading ? (
-        <>
-          <Loader2 className="h-5 w-5 text-primary animate-spin" />
-          <p className="text-xs text-muted-foreground">Processing {lastFile}…</p>
-        </>
-      ) : (
-        <>
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
-            <Upload className="h-4 w-4" />
-          </div>
-          <div className="text-center">
-            <p className="text-sm font-medium text-foreground">Drop IQVIA Excel file here</p>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              or click to browse &nbsp;·&nbsp; .xlsx / .xls
-            </p>
-          </div>
-          {error && (
-            <div className="flex items-center gap-1.5 text-xs text-destructive mt-1">
-              <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-              <span>{error}</span>
+          setIsDragging(true);
+        }}
+        onDragLeave={() => setIsDragging(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          setIsDragging(false);
+          const file = e.dataTransfer.files[0];
+          if (file) handleFile(file);
+        }}
+        onClick={triggerInput}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            triggerInput();
+          }
+        }}
+        className={cn(
+          "rounded-lg border-2 border-dashed flex flex-col items-center justify-center gap-2.5 py-14 cursor-pointer transition-colors select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+          isDragging
+            ? "border-primary/60 bg-primary/5"
+            : "border-border hover:border-primary/40 hover:bg-primary/[0.02]",
+          loading && "pointer-events-none opacity-60",
+        )}
+      >
+        {fileInput}
+        {loading ? (
+          <>
+            <Loader2 className="h-5 w-5 text-primary animate-spin" />
+            <p className="text-xs text-muted-foreground">Processing {lastFile}…</p>
+          </>
+        ) : (
+          <>
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <Upload className="h-4 w-4" />
             </div>
-          )}
-        </>
-      )}
+            <div className="text-center">
+              <p className="text-sm font-medium text-foreground">Drop IQVIA Excel file here</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                or click to browse &nbsp;·&nbsp; .xlsx / .xls
+              </p>
+            </div>
+            {error && (
+              <div className="flex items-center gap-1.5 text-xs text-destructive mt-1">
+                <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                <span>{error}</span>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+      <div className="rounded-lg border border-border/60 bg-secondary/20 px-4 py-3">
+        <p className="text-xs font-medium text-foreground mb-1">Expected columns</p>
+        <p className="text-xs text-muted-foreground leading-relaxed">
+          Molecule List · International Product · MAT Q2 2023/2024/2025_LCD MNF (revenue) · MAT
+          Q2 2023/2024/2025_Standard Units
+        </p>
+      </div>
     </div>
   );
 }
