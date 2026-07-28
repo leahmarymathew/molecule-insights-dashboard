@@ -69,7 +69,11 @@ function renderCell(col: SortField | "Flags", m: MoleculeAnalytics) {
   switch (col) {
     case "Molecule":
       return (
-        <td key={col} className="px-4 py-2.5 font-medium text-foreground whitespace-nowrap">
+        <td
+          key={col}
+          title={m.Molecule}
+          className="px-4 py-2.5 font-medium text-foreground max-w-[220px] truncate"
+        >
           {m.Molecule}
         </td>
       );
@@ -182,9 +186,11 @@ function defaultVisibility(columns: Column[]) {
 export function ResultsTable({
   data,
   analysisMode,
+  onResetFilters,
 }: {
   data: MoleculeAnalytics[];
   analysisMode: "growth" | "revenue";
+  onResetFilters?: () => void;
 }) {
   const allColumns = analysisMode === "growth" ? GROWTH_COLUMNS : REVENUE_COLUMNS;
   const optionalColumns = allColumns.filter((c) => !c.defaultVisible);
@@ -194,6 +200,7 @@ export function ResultsTable({
   );
   const [columnsMenuOpen, setColumnsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const columnsButtonRef = useRef<HTMLButtonElement>(null);
   const [sortField, setSortField] = useState<SortField>(
     analysisMode === "growth" ? "STD_CAGR" : "Opportunity_Score",
   );
@@ -213,8 +220,18 @@ export function ResultsTable({
         setColumnsMenuOpen(false);
       }
     }
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        setColumnsMenuOpen(false);
+        columnsButtonRef.current?.focus();
+      }
+    }
     document.addEventListener("mousedown", onClickOutside);
-    return () => document.removeEventListener("mousedown", onClickOutside);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onClickOutside);
+      document.removeEventListener("keydown", onKeyDown);
+    };
   }, [columnsMenuOpen]);
 
   const columns = allColumns.filter((c) => visible[c.key]);
@@ -252,14 +269,21 @@ export function ResultsTable({
   const columnsToggle = optionalColumns.length > 0 && (
     <div className="relative" ref={menuRef}>
       <button
+        ref={columnsButtonRef}
         onClick={() => setColumnsMenuOpen((v) => !v)}
-        className="flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-xs font-medium text-foreground hover:bg-secondary transition-colors"
+        aria-haspopup="true"
+        aria-expanded={columnsMenuOpen}
+        className="flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-xs font-medium text-foreground hover:bg-secondary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         <Columns3 className="h-3.5 w-3.5" />
         Columns
       </button>
       {columnsMenuOpen && (
-        <div className="absolute right-0 z-10 mt-1 w-48 rounded-md border border-border bg-popover p-2 shadow-md">
+        <div
+          role="menu"
+          aria-label="Toggle table columns"
+          className="absolute right-0 z-10 mt-1 w-48 rounded-md border border-border bg-popover p-2 shadow-md"
+        >
           {optionalColumns.map((c) => (
             <label
               key={c.key}
@@ -284,6 +308,14 @@ export function ResultsTable({
       <div className="rounded-lg border border-border bg-card p-12 flex flex-col items-center gap-3 text-center">
         <FlaskConical className="h-10 w-10 text-muted-foreground opacity-30" />
         <p className="text-sm text-muted-foreground">No molecules match the current filters.</p>
+        {onResetFilters && (
+          <button
+            onClick={onResetFilters}
+            className="text-xs font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
+          >
+            Reset filters
+          </button>
+        )}
       </div>
     );
   }
@@ -300,45 +332,45 @@ export function ResultsTable({
               {columns.map(({ key, label, align, sortable = true }) => (
                 <th
                   key={key}
-                  onClick={() => toggleSort(key)}
+                  scope="col"
+                  aria-sort={
+                    !sortable
+                      ? undefined
+                      : sortField === key
+                        ? sortDir === "asc"
+                          ? "ascending"
+                          : "descending"
+                        : "none"
+                  }
                   className={cn(
-                    "px-4 py-2.5 text-xs font-medium uppercase tracking-wide text-muted-foreground whitespace-nowrap transition-colors select-none",
-                    sortable && "cursor-pointer hover:text-foreground",
+                    "px-4 py-2.5 text-xs font-medium uppercase tracking-wide text-muted-foreground whitespace-nowrap",
                     align === "right" && "text-right",
                     align === "center" && "text-center",
                   )}
                 >
-                  <span className="inline-flex items-center gap-1">
-                    {align === "right" && sortable && (
-                      <>
-                        {sortField === key ? (
-                          sortDir === "asc" ? (
-                            <ArrowUp className="h-3 w-3" />
-                          ) : (
-                            <ArrowDown className="h-3 w-3" />
-                          )
+                  {sortable ? (
+                    <button
+                      type="button"
+                      onClick={() => toggleSort(key)}
+                      className={cn(
+                        "inline-flex items-center gap-1 rounded transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                        align === "right" && "flex-row-reverse",
+                      )}
+                    >
+                      {sortField === key ? (
+                        sortDir === "asc" ? (
+                          <ArrowUp className="h-3 w-3" />
                         ) : (
-                          <ArrowUpDown className="h-3 w-3 opacity-30" />
-                        )}
-                        {label}
-                      </>
-                    )}
-                    {(align !== "right" || !sortable) && (
-                      <>
-                        {label}
-                        {sortable &&
-                          (sortField === key ? (
-                            sortDir === "asc" ? (
-                              <ArrowUp className="h-3 w-3" />
-                            ) : (
-                              <ArrowDown className="h-3 w-3" />
-                            )
-                          ) : (
-                            <ArrowUpDown className="h-3 w-3 opacity-30" />
-                          ))}
-                      </>
-                    )}
-                  </span>
+                          <ArrowDown className="h-3 w-3" />
+                        )
+                      ) : (
+                        <ArrowUpDown className="h-3 w-3 opacity-30" />
+                      )}
+                      {label}
+                    </button>
+                  ) : (
+                    <span className="inline-flex items-center gap-1">{label}</span>
+                  )}
                 </th>
               ))}
             </tr>

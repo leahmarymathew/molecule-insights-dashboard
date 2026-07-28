@@ -51,6 +51,7 @@ export function UploadSection({ onUploadComplete, currentSummary }: UploadSectio
       ref={inputRef}
       type="file"
       accept=".xlsx,.xls"
+      aria-label="Upload IQVIA Excel file"
       className="hidden"
       onChange={(e) => {
         const file = e.target.files?.[0];
@@ -63,7 +64,7 @@ export function UploadSection({ onUploadComplete, currentSummary }: UploadSectio
   // Compact bar shown after data is loaded
   if (currentSummary) {
     return (
-      <div className="rounded-lg border border-border bg-card px-4 py-2.5 flex items-center gap-4 min-w-0">
+      <div className="rounded-lg border border-border bg-card px-4 py-2.5 flex flex-wrap items-center gap-x-4 gap-y-2 min-w-0">
         {fileInput}
         {loading ? (
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -107,6 +108,9 @@ export function UploadSection({ onUploadComplete, currentSummary }: UploadSectio
   // Full drop zone shown when no data is loaded yet
   return (
     <div
+      role="button"
+      tabIndex={0}
+      aria-label="Upload IQVIA Excel file, drop a file here or press Enter to browse"
       onDragOver={(e) => {
         e.preventDefault();
         setIsDragging(true);
@@ -119,8 +123,14 @@ export function UploadSection({ onUploadComplete, currentSummary }: UploadSectio
         if (file) handleFile(file);
       }}
       onClick={triggerInput}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          triggerInput();
+        }
+      }}
       className={cn(
-        "rounded-lg border-2 border-dashed flex flex-col items-center justify-center gap-2.5 py-14 cursor-pointer transition-colors select-none",
+        "rounded-lg border-2 border-dashed flex flex-col items-center justify-center gap-2.5 py-14 cursor-pointer transition-colors select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         isDragging
           ? "border-primary/60 bg-primary/5"
           : "border-border hover:border-primary/40 hover:bg-primary/[0.02]",
