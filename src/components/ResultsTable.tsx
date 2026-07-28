@@ -252,7 +252,11 @@ export function ResultsTable({
                     {align === "right" && sortable && (
                       <>
                         {sortField === key ? (
-                          sortDir === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                          sortDir === "asc" ? (
+                            <ArrowUp className="h-3 w-3" />
+                          ) : (
+                            <ArrowDown className="h-3 w-3" />
+                          )
                         ) : (
                           <ArrowUpDown className="h-3 w-3 opacity-30" />
                         )}
@@ -262,11 +266,16 @@ export function ResultsTable({
                     {(align !== "right" || !sortable) && (
                       <>
                         {label}
-                        {sortable && (sortField === key ? (
-                          sortDir === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
-                        ) : (
-                          <ArrowUpDown className="h-3 w-3 opacity-30" />
-                        ))}
+                        {sortable &&
+                          (sortField === key ? (
+                            sortDir === "asc" ? (
+                              <ArrowUp className="h-3 w-3" />
+                            ) : (
+                              <ArrowDown className="h-3 w-3" />
+                            )
+                          ) : (
+                            <ArrowUpDown className="h-3 w-3 opacity-30" />
+                          ))}
                       </>
                     )}
                   </span>

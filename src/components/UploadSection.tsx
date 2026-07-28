@@ -107,7 +107,10 @@ export function UploadSection({ onUploadComplete, currentSummary }: UploadSectio
   // Full drop zone shown when no data is loaded yet
   return (
     <div
-      onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+      onDragOver={(e) => {
+        e.preventDefault();
+        setIsDragging(true);
+      }}
       onDragLeave={() => setIsDragging(false)}
       onDrop={(e) => {
         e.preventDefault();

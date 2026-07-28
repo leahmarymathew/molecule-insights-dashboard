@@ -25,7 +25,12 @@
       "Skill(run)",
       "Bash(python3 *)",
       "Bash(git -C \"C:/Users/Leah/Documents/git/molecule/molecule-insights-dashboard\" status)",
-      "Bash(git -C \"C:/Users/Leah/Documents/git/molecule/molecule-insights-dashboard\" log --oneline -3)"
+      "Bash(git -C \"C:/Users/Leah/Documents/git/molecule/molecule-insights-dashboard\" log --oneline -3)",
+      "Bash(git checkout *)",
+      "Bash(rm -f package-lock.json)",
+      "Bash(npm install *)",
+      "Bash(xxd src/pages/Dashboard.tsx)",
+      "Bash(python -c ' *)"
     ]
   }
 }

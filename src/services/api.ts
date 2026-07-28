@@ -6,8 +6,6 @@ if (!API_BASE) {
   throw new Error("VITE_API_BASE is not configured");
 }
 
-console.log("API BASE:", API_BASE);
-
 export async function uploadFile(file: File): Promise<UploadResponse> {
   const formData = new FormData();
   formData.append("file", file);
@@ -25,11 +23,7 @@ export async function uploadFile(file: File): Promise<UploadResponse> {
     if (!response.ok) {
       const errorText = await response.text();
 
-      throw new Error(
-        `Server error ${response.status}: ${
-          errorText || response.statusText
-        }`
-      );
+      throw new Error(`Server error ${response.status}: ${errorText || response.statusText}`);
     }
 
     return await response.json();
@@ -37,15 +31,11 @@ export async function uploadFile(file: File): Promise<UploadResponse> {
     console.error("Upload Error:", e);
 
     if (e instanceof DOMException && e.name === "AbortError") {
-      throw new Error(
-        "Request timed out. The backend took too long to respond."
-      );
+      throw new Error("Request timed out. The backend took too long to respond.");
     }
 
     if (e instanceof TypeError) {
-      throw new Error(
-        "Cannot connect to backend. Check Render deployment and CORS configuration."
-      );
+      throw new Error("Cannot connect to backend. Check Render deployment and CORS configuration.");
     }
 
     if (e instanceof Error) {
