@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { FlaskConical, Target, ShieldAlert, TrendingUp, Download, Printer } from "lucide-react";
+import { FlaskConical, Target, ShieldAlert, TrendingUp, Download } from "lucide-react";
 import * as XLSX from "xlsx";
 import type { MoleculeAnalytics, FilterParams, UploadResponse, NavSection, Analysis } from "@/types";
 import { AppSidebar } from "@/components/AppSidebar";
@@ -170,7 +170,7 @@ export default function Dashboard() {
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <Header activeSection={activeSection} />
 
-        <main className="flex-1 overflow-auto print:overflow-visible">
+        <main className="flex-1 overflow-auto">
           {/* OVERVIEW */}
           {activeSection === "overview" && (
             <div className="p-6 space-y-6">
@@ -216,8 +216,8 @@ export default function Dashboard() {
 
           {/* MOLECULES */}
           {activeSection === "molecules" && (
-            <div className="p-6 space-y-4 print:p-0">
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border print:hidden">
+            <div className="p-6 space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border">
                 {/* Analysis Toggle */}
                 {(analysis1Growth || analysis2Revenue) && (
                   <div className="flex gap-2">
@@ -244,7 +244,7 @@ export default function Dashboard() {
                   </div>
                 )}
 
-                {/* Export / Print toolbar */}
+                {/* Export toolbar */}
                 <div className="flex items-center gap-2 pb-2">
                   <button
                     onClick={() =>
@@ -274,36 +274,26 @@ export default function Dashboard() {
                     <Download className="h-3.5 w-3.5" />
                     Export All ({currentAnalysisData.length})
                   </button>
-                  <button
-                    onClick={() => window.print()}
-                    disabled={!filtered.length}
-                    className="flex items-center gap-1.5 rounded-md bg-primary px-2.5 py-1.5 text-xs font-medium text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-40 disabled:pointer-events-none"
-                  >
-                    <Printer className="h-3.5 w-3.5" />
-                    Print
-                  </button>
                 </div>
               </div>
 
               {/* Analysis description */}
               {(analysis1Growth || analysis2Revenue) && (
-                <p className="text-xs text-muted-foreground print:hidden">
+                <p className="text-xs text-muted-foreground">
                   {activeAnalysis === "growth"
                     ? `${analysis1Growth?.description} · sorted by ${analysis1Growth?.sort_by}`
                     : `${analysis2Revenue?.description} · sorted by ${analysis2Revenue?.sort_by}`}
                 </p>
               )}
 
-              <div className="print:hidden">
-                <FilterPanel
-                  filters={filters}
-                  onChange={setFilters}
-                  onReset={() => setFilters(DEFAULT_FILTERS)}
-                  totalCount={currentAnalysisData.length}
-                  filteredCount={filtered.length}
-                  mode={activeAnalysis}
-                />
-              </div>
+              <FilterPanel
+                filters={filters}
+                onChange={setFilters}
+                onReset={() => setFilters(DEFAULT_FILTERS)}
+                totalCount={currentAnalysisData.length}
+                filteredCount={filtered.length}
+                mode={activeAnalysis}
+              />
               <ResultsTable data={filtered} analysisMode={activeAnalysis} />
             </div>
           )}
