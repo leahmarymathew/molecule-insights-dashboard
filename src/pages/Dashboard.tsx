@@ -32,11 +32,7 @@ function fmtRevenue(v: number) {
   return `$${v.toFixed(0)}`;
 }
 
-function exportExcel(
-  fileName: string,
-  data: MoleculeAnalytics[],
-  mode: "growth" | "revenue",
-) {
+function exportExcel(fileName: string, data: MoleculeAnalytics[], mode: "growth" | "revenue") {
   if (!data.length) return;
 
   const rows = data.map((m) =>
@@ -205,7 +201,9 @@ export default function Dashboard() {
                       label="Avg STD CAGR"
                       value={kpis ? `${kpis.avgCagr.toFixed(1)}%` : "—"}
                       icon={TrendingUp}
-                      hint={kpis ? `Total revenue: ${fmtRevenue(kpis.totalRev)}` : "2-year unit growth"}
+                      hint={
+                        kpis ? `Total revenue: ${fmtRevenue(kpis.totalRev)}` : "2-year unit growth"
+                      }
                     />
                   </div>
                   <OverviewCharts analytics={filtered} />
@@ -269,14 +267,18 @@ export default function Dashboard() {
               {analytics.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 text-center">
                   <TrendingUp className="h-10 w-10 text-muted-foreground opacity-20 mb-3" />
-                  <p className="text-sm text-muted-foreground">Upload a dataset to generate reports</p>
+                  <p className="text-sm text-muted-foreground">
+                    Upload a dataset to generate reports
+                  </p>
                 </div>
               ) : (
                 <>
                   <div className="rounded-lg border border-border/60 bg-card p-4 space-y-3">
                     <div>
                       <p className="text-sm font-medium text-foreground">Growth Focus Export</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">All molecules · sorted by STD CAGR</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        All molecules · sorted by STD CAGR
+                      </p>
                     </div>
                     <button
                       onClick={() => exportExcel("growth_focus.xlsx", preMonopolyExport, "growth")}
@@ -289,7 +291,9 @@ export default function Dashboard() {
                   <div className="rounded-lg border border-border/60 bg-card p-4 space-y-3">
                     <div>
                       <p className="text-sm font-medium text-foreground">Revenue Focus Export</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">Monopolies excluded · sorted by Opportunity Score</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Monopolies excluded · sorted by Opportunity Score
+                      </p>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <label className="flex flex-col gap-1 text-xs text-muted-foreground">
@@ -317,7 +321,9 @@ export default function Dashboard() {
                       </label>
                     </div>
                     <button
-                      onClick={() => exportExcel("revenue_focus.xlsx", postMonopolyExport, "revenue")}
+                      onClick={() =>
+                        exportExcel("revenue_focus.xlsx", postMonopolyExport, "revenue")
+                      }
                       className="w-full px-3 py-2 bg-primary text-primary-foreground rounded-md text-xs font-medium hover:opacity-90 transition-opacity"
                     >
                       Export {postMonopolyExport.length} molecules
