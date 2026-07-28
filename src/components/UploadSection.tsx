@@ -101,9 +101,9 @@ export function UploadSection({
             )}
             <button
               onClick={triggerInput}
-              className="ml-auto flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors shrink-0"
+              className="ml-auto flex items-center gap-1.5 rounded-md border border-border-strong bg-card px-3 py-1.5 text-xs font-medium text-foreground shadow-sm hover:bg-secondary hover:border-foreground/40 transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              <Upload className="h-3 w-3" />
+              <Upload className="h-3.5 w-3.5" />
               Replace
             </button>
           </>
@@ -116,9 +116,6 @@ export function UploadSection({
   return (
     <div className="space-y-3">
       <div
-        role="button"
-        tabIndex={0}
-        aria-label="Upload IQVIA Excel file, drop a file here or press Enter to browse"
         onDragOver={(e) => {
           e.preventDefault();
           setIsDragging(true);
@@ -130,15 +127,8 @@ export function UploadSection({
           const file = e.dataTransfer.files[0];
           if (file) handleFile(file);
         }}
-        onClick={triggerInput}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            triggerInput();
-          }
-        }}
         className={cn(
-          "rounded-lg border-2 border-dashed flex flex-col items-center justify-center gap-2.5 py-14 cursor-pointer transition-colors select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+          "rounded-lg border-2 border-dashed flex flex-col items-center justify-center gap-3 py-14 transition-colors select-none",
           isDragging
             ? "border-primary/60 bg-primary/5"
             : "border-border hover:border-primary/40 hover:bg-primary/[0.02]",
@@ -158,10 +148,16 @@ export function UploadSection({
             </div>
             <div className="text-center">
               <p className="text-sm font-medium text-foreground">Drop IQVIA Excel file here</p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                or click to browse &nbsp;·&nbsp; .xlsx / .xls
-              </p>
+              <p className="text-xs text-muted-foreground mt-0.5">or drag &amp; drop .xlsx / .xls</p>
             </div>
+            <button
+              type="button"
+              onClick={triggerInput}
+              className="mt-1 flex items-center gap-1.5 rounded-md bg-primary px-3.5 py-1.5 text-xs font-medium text-primary-foreground shadow-sm hover:opacity-90 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <Upload className="h-3.5 w-3.5" />
+              Browse Files
+            </button>
             {error && (
               <div className="flex items-center gap-1.5 text-xs text-destructive mt-1">
                 <AlertCircle className="h-3.5 w-3.5 shrink-0" />

@@ -32,12 +32,12 @@ export function AppSidebar({
       {/* Logo */}
       <div
         className={cn(
-          "flex items-center h-12 border-b border-sidebar-border",
+          "flex items-center h-14 border-b border-sidebar-border",
           collapsed ? "justify-center px-0" : "gap-2.5 px-4",
         )}
       >
-        <div className="flex h-6 w-6 items-center justify-center rounded-md bg-primary shrink-0">
-          <Atom className="h-3.5 w-3.5 text-primary-foreground" />
+        <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary shrink-0">
+          <Atom className="h-4 w-4 text-primary-foreground" />
         </div>
         {!collapsed && (
           <span className="text-sm font-semibold text-sidebar-foreground tracking-tight truncate">
