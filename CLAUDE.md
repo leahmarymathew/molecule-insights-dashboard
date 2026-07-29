@@ -41,7 +41,7 @@ KpiCard / ResultsTable / ChartPanel rendering
 - **Entry point**: `src/client.tsx` renders `RootLayout` into `#root`; `src/pages/RootLayout.tsx` renders `Dashboard` directly — there is no router
 - **State**: Local React state only — no Redux/Context. `Dashboard.tsx` owns `rows`, `analytics`, and `filters`; passes them down as props
 - **UI library**: Hand-built components in `src/components/` (no component library); chart components use Recharts
-- **Styling**: Tailwind CSS v4, configured via `@theme` in `src/styles.css` (no `tailwind.config.js` needed for v4), dark theme by default with oklch design tokens
+- **Styling**: Tailwind CSS v4, configured via `@theme` in `src/styles.css` (no `tailwind.config.js` needed for v4), light theme only with oklch design tokens
 
 Key source directories:
 | Path | Purpose |
