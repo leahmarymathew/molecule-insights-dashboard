@@ -1,13 +1,7 @@
-import { useState, useMemo } from "react";
-import { FlaskConical, Target, ShieldAlert, TrendingUp } from "lucide-react";
+import { useState, useMemo, useEffect } from "react";
+import { Trophy, Target, ShieldAlert, TrendingUp, Download } from "lucide-react";
 import * as XLSX from "xlsx";
-import type {
-  MoleculeAnalytics,
-  FilterParams,
-  UploadResponse,
-  NavSection,
-  Analysis,
-} from "@/types";
+import type { MoleculeAnalytics, FilterParams, UploadResponse, NavSection, Analysis } from "@/types";
 import { AppSidebar } from "@/components/AppSidebar";
 import { Header } from "@/components/Header";
 import { KpiCard } from "@/components/KpiCard";
@@ -16,6 +10,9 @@ import { FilterPanel } from "@/components/FilterPanel";
 import { ResultsTable } from "@/components/ResultsTable";
 import { OverviewCharts } from "@/components/OverviewCharts";
 
+const SIDEBAR_COLLAPSED_KEY = "moleculab.sidebarCollapsed";
+const MOBILE_BREAKPOINT = 768;
+
 const DEFAULT_FILTERS: FilterParams = {
   minStdCagr: -Infinity,
   maxCompetitionCount: 100,
@@ -23,6 +20,8 @@ const DEFAULT_FILTERS: FilterParams = {
   minRevenue2024: 0,
   minRevenue2025: 0,
   minRevenueCagr: -Infinity,
+  minOpportunityScore: -Infinity,
+  maxDominanceRatio: 1,
   monopolyMode: "all",
 };
 
@@ -32,10 +31,8 @@ function fmtRevenue(v: number) {
   return `$${v.toFixed(0)}`;
 }
 
-function exportExcel(fileName: string, data: MoleculeAnalytics[], mode: "growth" | "revenue") {
-  if (!data.length) return;
-
-  const rows = data.map((m) =>
+function toExportRows(data: MoleculeAnalytics[], mode: "growth" | "revenue") {
+  return data.map((m) =>
     mode === "growth"
       ? {
           Molecule: m.Molecule,
@@ -66,27 +63,57 @@ function exportExcel(fileName: string, data: MoleculeAnalytics[], mode: "growth"
           Revenue_CAGR: m.Revenue_CAGR,
         },
   );
+}
 
-  const sheet = XLSX.utils.json_to_sheet(rows);
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, sheet, "Molecules");
-  XLSX.writeFile(workbook, fileName);
+function exportCsv(fileName: string, data: MoleculeAnalytics[], mode: "growth" | "revenue") {
+  if (!data.length) return;
+  const sheet = XLSX.utils.json_to_sheet(toExportRows(data, mode));
+  const csv = XLSX.utils.sheet_to_csv(sheet);
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = fileName;
+  link.click();
+  URL.revokeObjectURL(url);
 }
 
 export default function Dashboard() {
   const [activeSection, setActiveSection] = useState<NavSection>("overview");
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    if (window.innerWidth < MOBILE_BREAKPOINT) return true;
+    return localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === "true";
+  });
   const [analytics, setAnalytics] = useState<MoleculeAnalytics[]>([]);
   const [analysis1Growth, setAnalysis1Growth] = useState<Analysis | null>(null);
   const [analysis2Revenue, setAnalysis2Revenue] = useState<Analysis | null>(null);
   const [activeAnalysis, setActiveAnalysis] = useState<"growth" | "revenue">("growth");
   const [filters, setFilters] = useState<FilterParams>(DEFAULT_FILTERS);
-  const [reportMinRevenueCagr, setReportMinRevenueCagr] = useState<number>(-Infinity);
-  const [reportMinRevenue2025, setReportMinRevenue2025] = useState<number>(0);
+  const [uploading, setUploading] = useState(false);
   const [summary, setSummary] = useState<{
     totalRows: number;
     uniqueMolecules: number;
     uniqueProducts: number;
   } | null>(null);
+
+  function toggleSidebarCollapsed() {
+    setSidebarCollapsed((prev) => {
+      const next = !prev;
+      localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(next));
+      return next;
+    });
+  }
+
+  useEffect(() => {
+    function handleResize() {
+      if (window.innerWidth < MOBILE_BREAKPOINT) {
+        setSidebarCollapsed(true);
+      }
+    }
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   function handleUploadComplete(res: UploadResponse) {
     // Handle both old and new response formats
@@ -126,6 +153,8 @@ export default function Dashboard() {
         if (m.Revenue_2024 < filters.minRevenue2024) return false;
         if (m.Revenue_2025 < filters.minRevenue2025) return false;
         if (m.Revenue_CAGR < filters.minRevenueCagr) return false;
+        if (m.Opportunity_Score < filters.minOpportunityScore) return false;
+        if (m.Dominance_Ratio > filters.maxDominanceRatio) return false;
         if (filters.monopolyMode === "monopoly_only" && !m.Monopoly_Flag) return false;
         if (filters.monopolyMode === "exclude_monopoly" && m.Monopoly_Flag) return false;
         return true;
@@ -133,29 +162,24 @@ export default function Dashboard() {
     [currentAnalysisData, filters],
   );
 
-  const kpis = useMemo(() => {
-    if (!filtered.length) return null;
-    const highGrowth = filtered.filter((m) => m.STD_CAGR > 0).length;
-    const monopolies = filtered.filter((m) => m.Monopoly_Flag).length;
-    const avgCagr = filtered.reduce((s, m) => s + m.STD_CAGR, 0) / filtered.length;
-    const totalRev = filtered.reduce((s, m) => s + m.Revenue_2025, 0);
-    return { highGrowth, monopolies, avgCagr, totalRev };
-  }, [filtered]);
-
-  const preMonopolyExport = useMemo(
-    () => [...(analysis1Growth?.results || analytics)].sort((a, b) => b.STD_CAGR - a.STD_CAGR),
-    [analysis1Growth, analytics],
+  // Overview is a stable "where should I invest" snapshot — it intentionally
+  // ignores the Molecules tab's filters/mode and always sources from the
+  // opportunity-ranked, monopoly-excluded dataset (already sorted desc by
+  // Opportunity_Score by the backend).
+  const opportunityData = useMemo(
+    () => analysis2Revenue?.results || analytics,
+    [analysis2Revenue, analytics],
   );
 
-  const postMonopolyExport = useMemo(
-    () =>
-      (analysis2Revenue?.results || analytics.filter((m) => !m.Monopoly_Flag))
-        .filter((m) => !m.Monopoly_Flag)
-        .filter((m) => m.Revenue_CAGR >= reportMinRevenueCagr)
-        .filter((m) => m.Revenue_2025 >= reportMinRevenue2025)
-        .sort((a, b) => b.Opportunity_Score - a.Opportunity_Score),
-    [analysis2Revenue, analytics, reportMinRevenueCagr, reportMinRevenue2025],
-  );
+  const overviewKpis = useMemo(() => {
+    if (!opportunityData.length) return null;
+    const topOpportunity = opportunityData[0];
+    const highOpportunityCount = opportunityData.filter((m) => m.Opportunity_Score >= 60).length;
+    const monopolies = analytics.filter((m) => m.Monopoly_Flag).length;
+    const avgOpportunityScore =
+      opportunityData.reduce((s, m) => s + m.Opportunity_Score, 0) / opportunityData.length;
+    return { topOpportunity, highOpportunityCount, monopolies, avgOpportunityScore };
+  }, [opportunityData, analytics]);
 
   return (
     <div className="flex h-screen bg-background overflow-hidden">
@@ -163,6 +187,8 @@ export default function Dashboard() {
         activeSection={activeSection}
         onNavigate={setActiveSection}
         hasData={analytics.length > 0}
+        collapsed={sidebarCollapsed}
+        onToggleCollapsed={toggleSidebarCollapsed}
       />
 
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
@@ -172,41 +198,74 @@ export default function Dashboard() {
           {/* OVERVIEW */}
           {activeSection === "overview" && (
             <div className="p-6 space-y-6">
-              <UploadSection onUploadComplete={handleUploadComplete} currentSummary={summary} />
+              <UploadSection
+                onUploadComplete={handleUploadComplete}
+                onLoadingChange={setUploading}
+                currentSummary={summary}
+              />
+
+              {uploading && analytics.length === 0 && (
+                <div className="space-y-4 animate-pulse" aria-hidden="true">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {Array.from({ length: 4 }).map((_, i) => (
+                      <div key={i} className="rounded-lg border border-border bg-card p-4 h-24">
+                        <div className="h-3 w-20 rounded bg-secondary mb-3" />
+                        <div className="h-6 w-12 rounded bg-secondary" />
+                      </div>
+                    ))}
+                  </div>
+                  <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                    <div className="rounded-lg border border-border bg-card p-4 h-64 bg-secondary/20" />
+                    <div className="rounded-lg border border-border bg-card p-4 h-64 bg-secondary/20" />
+                  </div>
+                </div>
+              )}
 
               {analytics.length > 0 && (
                 <>
-                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     <KpiCard
-                      label="Total Molecules"
-                      value={filtered.length.toString()}
-                      icon={FlaskConical}
-                      hint={`${summary?.uniqueProducts ?? 0} unique brands`}
+                      label="Top Opportunity"
+                      value={overviewKpis?.topOpportunity.Molecule ?? "—"}
+                      icon={Trophy}
+                      hint={
+                        overviewKpis
+                          ? `Score ${overviewKpis.topOpportunity.Opportunity_Score.toFixed(1)} · ${fmtRevenue(overviewKpis.topOpportunity.Revenue_2025)} revenue`
+                          : "Best-ranked molecule"
+                      }
+                      highlight="green"
                     />
                     <KpiCard
-                      label="Growing Molecules"
-                      value={kpis ? kpis.highGrowth.toString() : "—"}
+                      label="High-Opportunity"
+                      value={overviewKpis ? overviewKpis.highOpportunityCount.toString() : "—"}
                       icon={Target}
-                      hint="Positive STD CAGR"
-                      highlight={kpis && kpis.highGrowth > 0 ? "green" : undefined}
+                      hint="Opportunity Score ≥ 60"
+                      highlight={overviewKpis && overviewKpis.highOpportunityCount > 0 ? "green" : undefined}
                     />
                     <KpiCard
                       label="Monopoly Molecules"
-                      value={kpis ? kpis.monopolies.toString() : "—"}
+                      value={overviewKpis ? overviewKpis.monopolies.toString() : "—"}
                       icon={ShieldAlert}
-                      hint="Dominance Ratio ≥ 80%"
-                      highlight={kpis && kpis.monopolies > 0 ? "red" : undefined}
+                      hint="Excluded from opportunities"
+                      highlight={overviewKpis && overviewKpis.monopolies > 0 ? "red" : undefined}
                     />
                     <KpiCard
-                      label="Avg STD CAGR"
-                      value={kpis ? `${kpis.avgCagr.toFixed(1)}%` : "—"}
+                      label="Avg Opportunity Score"
+                      value={overviewKpis ? overviewKpis.avgOpportunityScore.toFixed(1) : "—"}
                       icon={TrendingUp}
-                      hint={
-                        kpis ? `Total revenue: ${fmtRevenue(kpis.totalRev)}` : "2-year unit growth"
+                      hint={overviewKpis ? `Across ${opportunityData.length} molecules` : "0–100 scale"}
+                      highlight={
+                        overviewKpis
+                          ? overviewKpis.avgOpportunityScore >= 60
+                            ? "green"
+                            : overviewKpis.avgOpportunityScore >= 40
+                              ? "amber"
+                              : undefined
+                          : undefined
                       }
                     />
                   </div>
-                  <OverviewCharts analytics={filtered} />
+                  <OverviewCharts opportunities={opportunityData} landscape={analytics} />
                 </>
               )}
             </div>
@@ -215,31 +274,48 @@ export default function Dashboard() {
           {/* MOLECULES */}
           {activeSection === "molecules" && (
             <div className="p-6 space-y-4">
-              {/* Analysis Toggle */}
-              {(analysis1Growth || analysis2Revenue) && (
-                <div className="flex gap-2 border-b border-border">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border">
+                {/* Analysis Toggle */}
+                {(analysis1Growth || analysis2Revenue) && (
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setActiveAnalysis("growth")}
+                      className={`px-4 py-2 text-sm font-medium transition-colors ${
+                        activeAnalysis === "growth"
+                          ? "border-b-2 border-primary text-primary"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      Growth Focus {analysis1Growth && `(${analysis1Growth.count})`}
+                    </button>
+                    <button
+                      onClick={() => setActiveAnalysis("revenue")}
+                      className={`px-4 py-2 text-sm font-medium transition-colors ${
+                        activeAnalysis === "revenue"
+                          ? "border-b-2 border-primary text-primary"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      Revenue Focus {analysis2Revenue && `(${analysis2Revenue.count})`}
+                    </button>
+                  </div>
+                )}
+
+                {/* Export toolbar */}
+                <div className="flex items-center gap-2 pb-2">
                   <button
-                    onClick={() => setActiveAnalysis("growth")}
-                    className={`px-4 py-2 text-sm font-medium transition-colors ${
-                      activeAnalysis === "growth"
-                        ? "border-b-2 border-primary text-primary"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
+                    onClick={() =>
+                      exportCsv(`molecules_${activeAnalysis}.csv`, filtered, activeAnalysis)
+                    }
+                    disabled={!filtered.length}
+                    title={!filtered.length ? "No molecules match the current filters" : undefined}
+                    className="flex items-center gap-1.5 whitespace-nowrap rounded-md border border-border-strong bg-card px-2.5 py-1.5 text-xs font-medium text-foreground shadow-sm hover:bg-secondary hover:border-foreground/40 transition-colors disabled:opacity-40 disabled:pointer-events-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   >
-                    Growth Focus {analysis1Growth && `(${analysis1Growth.count})`}
-                  </button>
-                  <button
-                    onClick={() => setActiveAnalysis("revenue")}
-                    className={`px-4 py-2 text-sm font-medium transition-colors ${
-                      activeAnalysis === "revenue"
-                        ? "border-b-2 border-primary text-primary"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    Revenue Focus {analysis2Revenue && `(${analysis2Revenue.count})`}
+                    <Download className="h-3.5 w-3.5" />
+                    Export ({filtered.length})
                   </button>
                 </div>
-              )}
+              </div>
 
               {/* Analysis description */}
               {(analysis1Growth || analysis2Revenue) && (
@@ -256,81 +332,13 @@ export default function Dashboard() {
                 onReset={() => setFilters(DEFAULT_FILTERS)}
                 totalCount={currentAnalysisData.length}
                 filteredCount={filtered.length}
+                mode={activeAnalysis}
               />
-              <ResultsTable data={filtered} analysisMode={activeAnalysis} />
-            </div>
-          )}
-
-          {/* REPORTS */}
-          {activeSection === "reports" && (
-            <div className="p-6 max-w-lg space-y-4">
-              {analytics.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-20 text-center">
-                  <TrendingUp className="h-10 w-10 text-muted-foreground opacity-20 mb-3" />
-                  <p className="text-sm text-muted-foreground">
-                    Upload a dataset to generate reports
-                  </p>
-                </div>
-              ) : (
-                <>
-                  <div className="rounded-lg border border-border/60 bg-card p-4 space-y-3">
-                    <div>
-                      <p className="text-sm font-medium text-foreground">Growth Focus Export</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        All molecules · sorted by STD CAGR
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => exportExcel("growth_focus.xlsx", preMonopolyExport, "growth")}
-                      className="w-full px-3 py-2 bg-primary text-primary-foreground rounded-md text-xs font-medium hover:opacity-90 transition-opacity"
-                    >
-                      Export {preMonopolyExport.length} molecules
-                    </button>
-                  </div>
-
-                  <div className="rounded-lg border border-border/60 bg-card p-4 space-y-3">
-                    <div>
-                      <p className="text-sm font-medium text-foreground">Revenue Focus Export</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        Monopolies excluded · sorted by Opportunity Score
-                      </p>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <label className="flex flex-col gap-1 text-xs text-muted-foreground">
-                        Min Revenue CAGR %
-                        <input
-                          type="number"
-                          value={isFinite(reportMinRevenueCagr) ? reportMinRevenueCagr : ""}
-                          placeholder="No minimum"
-                          onChange={(e) =>
-                            setReportMinRevenueCagr(
-                              e.target.value === "" ? -Infinity : Number(e.target.value),
-                            )
-                          }
-                          className="h-8 w-full rounded-md border border-border/60 bg-secondary/30 px-2 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-                        />
-                      </label>
-                      <label className="flex flex-col gap-1 text-xs text-muted-foreground">
-                        Min Revenue 2025
-                        <input
-                          type="number"
-                          value={reportMinRevenue2025}
-                          onChange={(e) => setReportMinRevenue2025(Number(e.target.value) || 0)}
-                          className="h-8 w-full rounded-md border border-border/60 bg-secondary/30 px-2 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-                        />
-                      </label>
-                    </div>
-                    <button
-                      onClick={() =>
-                        exportExcel("revenue_focus.xlsx", postMonopolyExport, "revenue")
-                      }
-                      className="w-full px-3 py-2 bg-primary text-primary-foreground rounded-md text-xs font-medium hover:opacity-90 transition-opacity"
-                    >
-                      Export {postMonopolyExport.length} molecules
-                    </button>
-                  </div>
-                </>
-              )}
+              <ResultsTable
+                data={filtered}
+                analysisMode={activeAnalysis}
+                onResetFilters={() => setFilters(DEFAULT_FILTERS)}
+              />
             </div>
           )}
         </main>

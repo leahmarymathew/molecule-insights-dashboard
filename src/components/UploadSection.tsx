@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 
 interface UploadSectionProps {
   onUploadComplete: (res: UploadResponse) => void;
+  onLoadingChange?: (loading: boolean) => void;
   currentSummary: {
     totalRows: number;
     uniqueMolecules: number;
@@ -13,7 +14,11 @@ interface UploadSectionProps {
   } | null;
 }
 
-export function UploadSection({ onUploadComplete, currentSummary }: UploadSectionProps) {
+export function UploadSection({
+  onUploadComplete,
+  onLoadingChange,
+  currentSummary,
+}: UploadSectionProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -28,6 +33,7 @@ export function UploadSection({ onUploadComplete, currentSummary }: UploadSectio
       }
       setError(null);
       setLoading(true);
+      onLoadingChange?.(true);
       setLastFile(file.name);
       try {
         const result = await uploadFile(file);
@@ -39,9 +45,10 @@ export function UploadSection({ onUploadComplete, currentSummary }: UploadSectio
         );
       } finally {
         setLoading(false);
+        onLoadingChange?.(false);
       }
     },
-    [onUploadComplete],
+    [onUploadComplete, onLoadingChange],
   );
 
   const triggerInput = () => !loading && inputRef.current?.click();
@@ -51,6 +58,7 @@ export function UploadSection({ onUploadComplete, currentSummary }: UploadSectio
       ref={inputRef}
       type="file"
       accept=".xlsx,.xls"
+      aria-label="Upload IQVIA Excel file"
       className="hidden"
       onChange={(e) => {
         const file = e.target.files?.[0];
@@ -63,7 +71,7 @@ export function UploadSection({ onUploadComplete, currentSummary }: UploadSectio
   // Compact bar shown after data is loaded
   if (currentSummary) {
     return (
-      <div className="rounded-lg border border-border/60 bg-card px-4 py-2.5 flex items-center gap-4 min-w-0">
+      <div className="rounded-lg border border-border bg-card px-4 py-2.5 flex flex-wrap items-center gap-x-4 gap-y-2 min-w-0">
         {fileInput}
         {loading ? (
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -73,7 +81,7 @@ export function UploadSection({ onUploadComplete, currentSummary }: UploadSectio
         ) : (
           <>
             <div className="flex items-center gap-2 shrink-0">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shrink-0" />
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" />
               <span className="text-xs font-medium text-foreground truncate max-w-52">
                 {lastFile ?? "Dataset loaded"}
               </span>
@@ -93,9 +101,9 @@ export function UploadSection({ onUploadComplete, currentSummary }: UploadSectio
             )}
             <button
               onClick={triggerInput}
-              className="ml-auto flex items-center gap-1.5 rounded-md border border-border/60 px-2.5 py-1 text-xs text-muted-foreground hover:text-foreground hover:border-border transition-colors shrink-0"
+              className="ml-auto flex items-center gap-1.5 rounded-md border border-border-strong bg-card px-3 py-1.5 text-xs font-medium text-foreground shadow-sm hover:bg-secondary hover:border-foreground/40 transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              <Upload className="h-3 w-3" />
+              <Upload className="h-3.5 w-3.5" />
               Replace
             </button>
           </>
@@ -106,52 +114,66 @@ export function UploadSection({ onUploadComplete, currentSummary }: UploadSectio
 
   // Full drop zone shown when no data is loaded yet
   return (
-    <div
-      onDragOver={(e) => {
-        e.preventDefault();
-        setIsDragging(true);
-      }}
-      onDragLeave={() => setIsDragging(false)}
-      onDrop={(e) => {
-        e.preventDefault();
-        setIsDragging(false);
-        const file = e.dataTransfer.files[0];
-        if (file) handleFile(file);
-      }}
-      onClick={triggerInput}
-      className={cn(
-        "rounded-lg border-2 border-dashed flex flex-col items-center justify-center gap-2.5 py-14 cursor-pointer transition-colors select-none",
-        isDragging
-          ? "border-primary/60 bg-primary/5"
-          : "border-border/40 hover:border-primary/30 hover:bg-primary/[0.02]",
-        loading && "pointer-events-none opacity-60",
-      )}
-    >
-      {fileInput}
-      {loading ? (
-        <>
-          <Loader2 className="h-5 w-5 text-primary animate-spin" />
-          <p className="text-xs text-muted-foreground">Processing {lastFile}…</p>
-        </>
-      ) : (
-        <>
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
-            <Upload className="h-4 w-4" />
-          </div>
-          <div className="text-center">
-            <p className="text-sm font-medium text-foreground">Drop IQVIA Excel file here</p>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              or click to browse &nbsp;·&nbsp; .xlsx / .xls
-            </p>
-          </div>
-          {error && (
-            <div className="flex items-center gap-1.5 text-xs text-destructive mt-1">
-              <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-              <span>{error}</span>
+    <div className="space-y-3">
+      <div
+        onDragOver={(e) => {
+          e.preventDefault();
+          setIsDragging(true);
+        }}
+        onDragLeave={() => setIsDragging(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          setIsDragging(false);
+          const file = e.dataTransfer.files[0];
+          if (file) handleFile(file);
+        }}
+        className={cn(
+          "rounded-lg border-2 border-dashed flex flex-col items-center justify-center gap-3 py-14 transition-colors select-none",
+          isDragging
+            ? "border-primary/60 bg-primary/5"
+            : "border-border hover:border-primary/40 hover:bg-primary/[0.02]",
+          loading && "pointer-events-none opacity-60",
+        )}
+      >
+        {fileInput}
+        {loading ? (
+          <>
+            <Loader2 className="h-5 w-5 text-primary animate-spin" />
+            <p className="text-xs text-muted-foreground">Processing {lastFile}…</p>
+          </>
+        ) : (
+          <>
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <Upload className="h-4 w-4" />
             </div>
-          )}
-        </>
-      )}
+            <div className="text-center">
+              <p className="text-sm font-medium text-foreground">Drop IQVIA Excel file here</p>
+              <p className="text-xs text-muted-foreground mt-0.5">or drag &amp; drop .xlsx / .xls</p>
+            </div>
+            <button
+              type="button"
+              onClick={triggerInput}
+              className="mt-1 flex items-center gap-1.5 rounded-md bg-primary px-3.5 py-1.5 text-xs font-medium text-primary-foreground shadow-sm hover:opacity-90 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <Upload className="h-3.5 w-3.5" />
+              Browse Files
+            </button>
+            {error && (
+              <div className="flex items-center gap-1.5 text-xs text-destructive mt-1">
+                <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                <span>{error}</span>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+      <div className="rounded-lg border border-border/60 bg-secondary/20 px-4 py-3">
+        <p className="text-xs font-medium text-foreground mb-1">Expected columns</p>
+        <p className="text-xs text-muted-foreground leading-relaxed">
+          Molecule List · International Product · MAT Q2 2023/2024/2025_LCD MNF (revenue) · MAT
+          Q2 2023/2024/2025_Standard Units
+        </p>
+      </div>
     </div>
   );
 }

@@ -10,14 +10,14 @@ interface KpiCardProps {
 }
 
 const highlightClass: Record<string, string> = {
-  green: "text-emerald-400",
-  red: "text-red-400",
-  amber: "text-amber-400",
+  green: "text-emerald-600",
+  red: "text-red-600",
+  amber: "text-amber-600",
 };
 
 export function KpiCard({ label, value, icon: Icon, hint, highlight }: KpiCardProps) {
   return (
-    <div className="rounded-lg border border-border/60 bg-card p-4 transition hover:border-border">
+    <div className="rounded-lg border border-border bg-card p-4 transition hover:shadow-sm">
       <div className="flex items-center justify-between mb-2">
         <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
           {label}
