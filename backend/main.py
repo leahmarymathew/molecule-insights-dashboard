@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from openpyxl import load_workbook
 import io
 import os
+import re
 from typing import Dict, List, Any, Optional
 from collections import defaultdict
 
@@ -101,6 +102,23 @@ def normalize_innovation(value) -> str:
         return "UNKNOWN"
     v = str(value).strip().upper()
     return INNOVATION_KEY_MAP.get(v, "UNKNOWN")
+
+
+_TRAILING_PAREN_RE = re.compile(r"\s*\([^)]*\)\s*$")
+_TRAILING_VNX_RE = re.compile(r"\s+VNX$", re.IGNORECASE)
+
+
+def normalize_manufacturer(value) -> str:
+    """Collapses distribution-channel/code suffix variants of the same
+    manufacturer (e.g. "GSK VNX" / "DANAPHA (TW5)") to one canonical name,
+    for grouping/counting only — the raw Manufacturer string is still what
+    gets displayed."""
+    if not value:
+        return "UNKNOWN"
+    v = str(value).strip()
+    v = _TRAILING_PAREN_RE.sub("", v).strip()
+    v = _TRAILING_VNX_RE.sub("", v).strip()
+    return v or "UNKNOWN"
 
 
 def compute_analytics(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -269,6 +287,23 @@ def compute_analytics(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
 
         leading_r25 = max((d["r25"] for d in brand_detail.values()), default=0.0)
 
+        # Manufacturer/corporation concentration — a separate, brand-agnostic
+        # lens on competition. Brand names can differ while the owning
+        # manufacturer is identical (e.g. distribution-channel suffix
+        # variants like "GSK VNX"), which overstates true competitor count
+        # when read off Competition_Count alone.
+        manufacturer_to_brands: Dict[str, List[str]] = defaultdict(list)
+        corporations: set = set()
+        for brand, d in brand_detail.items():
+            norm_mfr = normalize_manufacturer(d["manufacturer"])
+            d["norm_manufacturer"] = norm_mfr
+            manufacturer_to_brands[norm_mfr].append(brand)
+            corporations.add(d["corporation"] or "Unknown")
+
+        unique_manufacturers = len(manufacturer_to_brands)
+        unique_corporations = len(corporations)
+        mfr_concentrated = unique_manufacturers < competition_count
+
         brands = []
         for brand, d in brand_detail.items():
             total = brand_totals[brand]
@@ -302,6 +337,16 @@ def compute_analytics(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
             ) * 100
             brand_opportunity_score = round(max(0.0, brand_score), 1)
 
+            # Other brands under the same (normalized) manufacturer in this
+            # molecule — the UNKNOWN bucket is excluded since brands only
+            # land there for lack of data, not a confirmed shared owner.
+            norm_mfr = d["norm_manufacturer"]
+            also_owns = (
+                [b for b in manufacturer_to_brands[norm_mfr] if b != brand]
+                if norm_mfr != "UNKNOWN"
+                else []
+            )
+
             brands.append({
                 "Brand": brand,
                 "Manufacturer": d["manufacturer"] or "Unknown",
@@ -313,6 +358,7 @@ def compute_analytics(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
                 "Brand_CAGR": round(brand_cagr, 2) if brand_cagr is not None else None,
                 "Trend": trend,
                 "Brand_Opportunity_Score": brand_opportunity_score,
+                "Also_Owns": also_owns,
             })
 
         brands.sort(key=lambda b: (-b["Brand_Opportunity_Score"], -b["Market_Share"]))
@@ -377,6 +423,9 @@ def compute_analytics(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
             "Molecule": molecule,
             "Opportunity_Score": opportunity_score,
             "Competition_Count": competition_count,
+            "Unique_Manufacturers": unique_manufacturers,
+            "Unique_Corporations": unique_corporations,
+            "MFR_CONCENTRATED": mfr_concentrated,
             "Dominance_Ratio": round(dominance_ratio, 4),
             "Monopoly_Flag": monopoly_flag,
             "Revenue_2023": round(rev_2023, 2),

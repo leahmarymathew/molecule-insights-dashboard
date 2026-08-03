@@ -1,5 +1,6 @@
 import { useMemo } from "react";
-import { ArrowLeft, Target, Users, ShieldAlert, TrendingUp } from "lucide-react";
+import { ArrowLeft, Target, Users, ShieldAlert, TrendingUp, Download, AlertTriangle } from "lucide-react";
+import * as XLSX from "xlsx";
 import {
   BarChart,
   Bar,
@@ -9,7 +10,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import type { MoleculeAnalytics, SectorSplit, InnovationMix, BrandTrend } from "@/types";
+import type { BrandDetail, MoleculeAnalytics, SectorSplit, InnovationMix, BrandTrend } from "@/types";
 import { KpiCard } from "@/components/KpiCard";
 import { FLAG_STYLES, FLAG_LABELS } from "@/components/ResultsTable";
 import { cn } from "@/lib/utils";
@@ -47,6 +48,36 @@ const TREND_LABELS: Record<BrandTrend, string> = {
 
 function fmtUnits(v: number) {
   return Math.round(v).toLocaleString();
+}
+
+function sanitizeFilename(name: string) {
+  return name.replace(/[^a-z0-9]+/gi, "_").replace(/^_+|_+$/g, "");
+}
+
+function exportBrandsCsv(molecule: MoleculeAnalytics, brands: BrandDetail[]) {
+  if (!brands.length) return;
+  const rows = brands.map((b) => ({
+    Rank: b.Brand_Rank,
+    Trend: b.Trend.join(" / "),
+    Brand: b.Brand,
+    Manufacturer: b.Manufacturer,
+    Corporation: b.Corporation,
+    Revenue_2023: b.Revenue_2023,
+    Revenue_2024: b.Revenue_2024,
+    Revenue_2025: b.Revenue_2025,
+    Market_Share_Pct: +(b.Market_Share * 100).toFixed(1),
+    CAGR_Pct: b.Brand_CAGR === null ? "" : b.Brand_CAGR.toFixed(1),
+    Also_Owns: b.Also_Owns.join("; "),
+  }));
+  const sheet = XLSX.utils.json_to_sheet(rows);
+  const csv = XLSX.utils.sheet_to_csv(sheet);
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `${sanitizeFilename(molecule.Molecule)}_brands.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
 }
 
 const TOOLTIP_STYLE: React.CSSProperties = {
@@ -179,6 +210,14 @@ export function MoleculeDetail({ molecule: m, onBack }: MoleculeDetailProps) {
 
   const brands = useMemo(() => [...m.Brands].sort((a, b) => a.Brand_Rank - b.Brand_Rank), [m]);
 
+  const leadBrand = useMemo(
+    () =>
+      brands.length
+        ? brands.reduce((top, b) => (b.Market_Share > top.Market_Share ? b : top), brands[0])
+        : null,
+    [brands],
+  );
+
   return (
     <div className="space-y-4">
       <div>
@@ -306,10 +345,38 @@ export function MoleculeDetail({ molecule: m, onBack }: MoleculeDetailProps) {
       </div>
 
       <div className="rounded-lg border border-border bg-card overflow-hidden">
-        <div className="border-b border-border px-4 py-2.5">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Brand / Competitor Breakdown
-          </h3>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-2.5">
+          <div>
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Brand / Competitor Breakdown
+            </h3>
+            {leadBrand && (
+              <p className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-muted-foreground">
+                <span>
+                  {m.Competition_Count} brand{m.Competition_Count !== 1 ? "s" : ""} ·{" "}
+                  {m.Unique_Manufacturers} manufacturer{m.Unique_Manufacturers !== 1 ? "s" : ""}{" "}
+                  competing · {leadBrand.Brand} leads at {(leadBrand.Market_Share * 100).toFixed(1)}%
+                </span>
+                {m.MFR_CONCENTRATED && (
+                  <span
+                    title="Some manufacturers hold multiple brands here, so the brand count overstates true competitor count"
+                    className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium border whitespace-nowrap bg-amber-50 text-amber-700 border-amber-200 cursor-help"
+                  >
+                    <AlertTriangle className="h-3 w-3" />
+                    Brand-concentrated ownership
+                  </span>
+                )}
+              </p>
+            )}
+          </div>
+          <button
+            onClick={() => exportBrandsCsv(m, brands)}
+            disabled={!brands.length}
+            className="flex items-center gap-1.5 whitespace-nowrap rounded-md border border-border-strong bg-card px-2.5 py-1.5 text-xs font-medium text-foreground shadow-sm hover:bg-secondary hover:border-foreground/40 transition-colors disabled:opacity-40 disabled:pointer-events-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <Download className="h-3.5 w-3.5" />
+            Export
+          </button>
         </div>
         {brands.length === 0 ? (
           <p className="p-6 text-center text-sm text-muted-foreground">
@@ -388,11 +455,18 @@ export function MoleculeDetail({ molecule: m, onBack }: MoleculeDetailProps) {
                         ))}
                       </div>
                     </td>
-                    <td
-                      title={b.Brand}
-                      className="max-w-[200px] truncate px-4 py-2.5 font-medium text-foreground"
-                    >
-                      {b.Brand}
+                    <td className="max-w-[200px] px-4 py-2.5">
+                      <div title={b.Brand} className="truncate font-medium text-foreground">
+                        {b.Brand}
+                      </div>
+                      {b.Also_Owns.length > 0 && (
+                        <div
+                          title={`${b.Manufacturer} also markets ${b.Also_Owns.join(", ")} under this molecule`}
+                          className="mt-0.5 truncate text-[10px] text-amber-700 cursor-help"
+                        >
+                          also owns: {b.Also_Owns.join(", ")}
+                        </div>
+                      )}
                     </td>
                     <td className="px-4 py-2.5 text-muted-foreground">{b.Manufacturer}</td>
                     <td className="px-4 py-2.5 text-muted-foreground">{b.Corporation}</td>
