@@ -47,3 +47,22 @@ export async function uploadFile(file: File): Promise<UploadResponse> {
     clearTimeout(timeout);
   }
 }
+
+export async function fetchDefaultDataset(): Promise<UploadResponse> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 30000);
+
+  try {
+    const response = await fetch(`${API_BASE}/default-dataset`, {
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      throw new Error(`Server error ${response.status}: ${response.statusText}`);
+    }
+
+    return await response.json();
+  } finally {
+    clearTimeout(timeout);
+  }
+}

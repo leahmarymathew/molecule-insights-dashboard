@@ -12,12 +12,14 @@ interface UploadSectionProps {
     uniqueMolecules: number;
     uniqueProducts: number;
   } | null;
+  isDefaultDataset?: boolean;
 }
 
 export function UploadSection({
   onUploadComplete,
   onLoadingChange,
   currentSummary,
+  isDefaultDataset = false,
 }: UploadSectionProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -81,9 +83,14 @@ export function UploadSection({
         ) : (
           <>
             <div className="flex items-center gap-2 shrink-0">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" />
+              <span
+                className={cn(
+                  "h-1.5 w-1.5 rounded-full shrink-0",
+                  isDefaultDataset ? "bg-sky-500" : "bg-emerald-500",
+                )}
+              />
               <span className="text-xs font-medium text-foreground truncate max-w-52">
-                {lastFile ?? "Dataset loaded"}
+                {isDefaultDataset ? "Using: Default dataset" : (lastFile ?? "Dataset loaded")}
               </span>
             </div>
             <div className="hidden sm:flex items-center gap-2 text-xs text-muted-foreground">
@@ -104,7 +111,7 @@ export function UploadSection({
               className="ml-auto flex items-center gap-1.5 rounded-md border border-border-strong bg-card px-3 py-1.5 text-xs font-medium text-foreground shadow-sm hover:bg-secondary hover:border-foreground/40 transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <Upload className="h-3.5 w-3.5" />
-              Replace
+              {isDefaultDataset ? "Replace with your own file" : "Replace"}
             </button>
           </>
         )}

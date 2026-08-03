@@ -9,6 +9,30 @@ export interface DatasetRow {
   "MAT Q2 2025_Standard Units": number | null;
 }
 
+export interface BrandDetail {
+  Brand: string;
+  Manufacturer: string;
+  Corporation: string;
+  Revenue_2023: number;
+  Revenue_2024: number;
+  Revenue_2025: number;
+  /** Share (0–1) of the molecule's 3-year total revenue held by this brand. */
+  Market_Share: number;
+}
+
+export interface SectorSplit {
+  HOSPITAL: number;
+  RETAIL: number;
+  UNKNOWN: number;
+}
+
+export interface InnovationMix {
+  INNOVATIVE_BRANDED_PRODUCTS: number;
+  NON_ORIGINAL_BRANDED_PRODUCTS: number;
+  UNBRANDED_PRODUCTS: number;
+  UNKNOWN: number;
+}
+
 export interface MoleculeAnalytics {
   Molecule: string;
   Opportunity_Score: number;
@@ -24,6 +48,9 @@ export interface MoleculeAnalytics {
   STD_CAGR: number;
   Revenue_CAGR: number;
   Flags: string[];
+  Brands: BrandDetail[];
+  Sector_Split: SectorSplit;
+  Innovation_Mix: InnovationMix;
 }
 
 export interface Analysis {
