@@ -57,12 +57,15 @@ app.add_middleware(
 )
 
 
-def compute_cagr(year0: float, year1_fallback: float, year2: float) -> float:
+def compute_cagr(year0: float, year1_fallback: float, year2: float) -> Optional[float]:
+    """2-year revenue CAGR (year0->year2), falling back to 1-year growth
+    (year1_fallback->year2). Returns None when neither base year has
+    revenue to grow from — the metric is undefined, not zero."""
     if year0 > 0 and year2 > 0:
         return ((year2 / year0) ** 0.5 - 1) * 100
     if year1_fallback > 0 and year2 > 0:
         return (year2 / year1_fallback - 1) * 100
-    return 0.0
+    return None
 
 
 def to_number(value):
@@ -199,8 +202,8 @@ def compute_analytics(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         std_2024 = sum(stds_2024)
         std_2025 = sum(stds_2025)
 
-        std_cagr = compute_cagr(std_2023, std_2024, std_2025)
-        rev_cagr = compute_cagr(rev_2023, rev_2024, rev_2025)
+        std_cagr = compute_cagr(std_2023, std_2024, std_2025) or 0.0
+        rev_cagr = compute_cagr(rev_2023, rev_2024, rev_2025) or 0.0
 
         # Single pass over this molecule's rows: brand-level detail (per-year
         # revenue + manufacturer/corporation), sector split, and innovation mix.
@@ -269,6 +272,7 @@ def compute_analytics(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         brands = []
         for brand, d in brand_detail.items():
             total = brand_totals[brand]
+            market_share = total / total_rev_3y if total_rev_3y > 0 else 0.0
             brand_cagr = compute_cagr(d["r23"], d["r24"], d["r25"])
             is_new_entrant = d["r23"] == 0 and d["r25"] > 0
 
@@ -277,12 +281,26 @@ def compute_analytics(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
                 trend.append("LEADING")
             if is_new_entrant:
                 trend.append("NEW_ENTRANT")
-            elif brand_cagr > 20:
+            elif brand_cagr is not None and brand_cagr > 20:
                 trend.append("RISING")
-            elif brand_cagr < -10:
+            elif brand_cagr is not None and brand_cagr < -10:
                 trend.append("DECLINING")
             else:
                 trend.append("STABLE")
+
+            # Brand_Opportunity_Score reuses the molecule-level formula's shape
+            # (40% revenue + 40% revenue-weighted growth + 20% revenue-weighted
+            # share) but swaps "low competition" for market share, since a
+            # brand's own share is a strength rather than a molecule-level
+            # monopoly risk. Undefined CAGR contributes as flat (0%) growth.
+            rev_norm_b = norm_revenue(d["r25"])
+            cagr_norm_b = norm_cagr(brand_cagr if brand_cagr is not None else 0.0)
+            brand_score = (
+                rev_norm_b * 0.40
+                + cagr_norm_b * rev_norm_b * 0.40
+                + market_share * rev_norm_b * 0.20
+            ) * 100
+            brand_opportunity_score = round(max(0.0, brand_score), 1)
 
             brands.append({
                 "Brand": brand,
@@ -291,11 +309,15 @@ def compute_analytics(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
                 "Revenue_2023": round(d["r23"], 2),
                 "Revenue_2024": round(d["r24"], 2),
                 "Revenue_2025": round(d["r25"], 2),
-                "Market_Share": round(total / total_rev_3y, 4) if total_rev_3y > 0 else 0.0,
-                "Brand_CAGR": round(brand_cagr, 2),
+                "Market_Share": round(market_share, 4),
+                "Brand_CAGR": round(brand_cagr, 2) if brand_cagr is not None else None,
                 "Trend": trend,
+                "Brand_Opportunity_Score": brand_opportunity_score,
             })
-        brands.sort(key=lambda b: b["Market_Share"], reverse=True)
+
+        brands.sort(key=lambda b: (-b["Brand_Opportunity_Score"], -b["Market_Share"]))
+        for i, b in enumerate(brands, start=1):
+            b["Brand_Rank"] = i
 
         sector_split = {
             key: round(sector_revenue.get(key, 0.0) / total_rev_3y, 4) if total_rev_3y > 0 else 0.0
