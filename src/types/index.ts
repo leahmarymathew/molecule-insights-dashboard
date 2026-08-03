@@ -9,6 +9,8 @@ export interface DatasetRow {
   "MAT Q2 2025_Standard Units": number | null;
 }
 
+export type BrandTrend = "LEADING" | "NEW_ENTRANT" | "RISING" | "DECLINING" | "STABLE";
+
 export interface BrandDetail {
   Brand: string;
   Manufacturer: string;
@@ -18,6 +20,10 @@ export interface BrandDetail {
   Revenue_2025: number;
   /** Share (0–1) of the molecule's 3-year total revenue held by this brand. */
   Market_Share: number;
+  /** 2023->2025 two-year CAGR (%), falling back to 2024->2025 growth if 2023 revenue is 0. */
+  Brand_CAGR: number;
+  /** LEADING is independent and may co-occur with exactly one of the other tags. */
+  Trend: BrandTrend[];
 }
 
 export interface SectorSplit {

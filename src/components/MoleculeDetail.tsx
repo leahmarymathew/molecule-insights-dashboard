@@ -9,7 +9,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import type { MoleculeAnalytics, SectorSplit, InnovationMix } from "@/types";
+import type { MoleculeAnalytics, SectorSplit, InnovationMix, BrandTrend } from "@/types";
 import { KpiCard } from "@/components/KpiCard";
 import { FLAG_STYLES, FLAG_LABELS } from "@/components/ResultsTable";
 import { cn } from "@/lib/utils";
@@ -28,6 +28,22 @@ function fmtRevenue(v: number) {
 function fmtRevenueExact(v: number) {
   return `$${Math.round(v).toLocaleString()}`;
 }
+
+const TREND_STYLES: Record<BrandTrend, string> = {
+  LEADING: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  RISING: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  DECLINING: "bg-red-50 text-red-700 border-red-200",
+  NEW_ENTRANT: "bg-blue-50 text-blue-700 border-blue-200",
+  STABLE: "bg-zinc-50 text-zinc-600 border-zinc-200",
+};
+
+const TREND_LABELS: Record<BrandTrend, string> = {
+  LEADING: "Leading",
+  RISING: "Rising",
+  DECLINING: "Declining",
+  NEW_ENTRANT: "New Entrant",
+  STABLE: "Stable",
+};
 
 function fmtUnits(v: number) {
   return Math.round(v).toLocaleString();
@@ -305,6 +321,9 @@ export function MoleculeDetail({ molecule: m, onBack }: MoleculeDetailProps) {
               <thead>
                 <tr className="border-b border-border bg-secondary/40">
                   <th className="whitespace-nowrap px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Trend
+                  </th>
+                  <th className="whitespace-nowrap px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
                     Brand
                   </th>
                   <th className="whitespace-nowrap px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -325,6 +344,9 @@ export function MoleculeDetail({ molecule: m, onBack }: MoleculeDetailProps) {
                   <th className="whitespace-nowrap px-4 py-2.5 text-right text-xs font-medium uppercase tracking-wide text-muted-foreground">
                     Market Share
                   </th>
+                  <th className="whitespace-nowrap px-4 py-2.5 text-right text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    CAGR
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -336,6 +358,21 @@ export function MoleculeDetail({ molecule: m, onBack }: MoleculeDetailProps) {
                       i % 2 === 1 && "bg-secondary/15",
                     )}
                   >
+                    <td className="px-4 py-2.5">
+                      <div className="flex flex-wrap gap-1">
+                        {b.Trend.map((t) => (
+                          <span
+                            key={t}
+                            className={cn(
+                              "inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium border whitespace-nowrap",
+                              TREND_STYLES[t],
+                            )}
+                          >
+                            {TREND_LABELS[t]}
+                          </span>
+                        ))}
+                      </div>
+                    </td>
                     <td
                       title={b.Brand}
                       className="max-w-[200px] truncate px-4 py-2.5 font-medium text-foreground"
@@ -355,6 +392,14 @@ export function MoleculeDetail({ molecule: m, onBack }: MoleculeDetailProps) {
                     </td>
                     <td className="px-4 py-2.5 text-right font-semibold tabular-nums text-foreground">
                       {(b.Market_Share * 100).toFixed(1)}%
+                    </td>
+                    <td
+                      className={cn(
+                        "px-4 py-2.5 text-right tabular-nums font-medium",
+                        b.Brand_CAGR > 0 ? "text-emerald-600" : "text-red-600",
+                      )}
+                    >
+                      {b.Brand_CAGR.toFixed(1)}%
                     </td>
                   </tr>
                 ))}

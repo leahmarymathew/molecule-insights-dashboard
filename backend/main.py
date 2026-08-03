@@ -57,6 +57,14 @@ app.add_middleware(
 )
 
 
+def compute_cagr(year0: float, year1_fallback: float, year2: float) -> float:
+    if year0 > 0 and year2 > 0:
+        return ((year2 / year0) ** 0.5 - 1) * 100
+    if year1_fallback > 0 and year2 > 0:
+        return (year2 / year1_fallback - 1) * 100
+    return 0.0
+
+
 def to_number(value):
     if value is None:
         return 0.0
@@ -191,33 +199,8 @@ def compute_analytics(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         std_2024 = sum(stds_2024)
         std_2025 = sum(stds_2025)
 
-        std_cagr = 0.0
-
-        if std_2023 > 0 and std_2025 > 0:
-            std_cagr = (
-                ((std_2025 / std_2023) ** (1 / 2) - 1)
-                * 100
-            )
-
-        elif std_2024 > 0 and std_2025 > 0:
-            std_cagr = (
-                (std_2025 / std_2024 - 1)
-                * 100
-            )
-
-        rev_cagr = 0.0
-
-        if rev_2023 > 0 and rev_2025 > 0:
-            rev_cagr = (
-                ((rev_2025 / rev_2023) ** (1 / 2) - 1)
-                * 100
-            )
-
-        elif rev_2024 > 0 and rev_2025 > 0:
-            rev_cagr = (
-                (rev_2025 / rev_2024 - 1)
-                * 100
-            )
+        std_cagr = compute_cagr(std_2023, std_2024, std_2025)
+        rev_cagr = compute_cagr(rev_2023, rev_2024, rev_2025)
 
         # Single pass over this molecule's rows: brand-level detail (per-year
         # revenue + manufacturer/corporation), sector split, and innovation mix.
@@ -281,9 +264,26 @@ def compute_analytics(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
             else 0.0
         )
 
+        leading_r25 = max((d["r25"] for d in brand_detail.values()), default=0.0)
+
         brands = []
         for brand, d in brand_detail.items():
             total = brand_totals[brand]
+            brand_cagr = compute_cagr(d["r23"], d["r24"], d["r25"])
+            is_new_entrant = d["r23"] == 0 and d["r25"] > 0
+
+            trend = []
+            if leading_r25 > 0 and d["r25"] == leading_r25:
+                trend.append("LEADING")
+            if is_new_entrant:
+                trend.append("NEW_ENTRANT")
+            elif brand_cagr > 20:
+                trend.append("RISING")
+            elif brand_cagr < -10:
+                trend.append("DECLINING")
+            else:
+                trend.append("STABLE")
+
             brands.append({
                 "Brand": brand,
                 "Manufacturer": d["manufacturer"] or "Unknown",
@@ -292,6 +292,8 @@ def compute_analytics(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
                 "Revenue_2024": round(d["r24"], 2),
                 "Revenue_2025": round(d["r25"], 2),
                 "Market_Share": round(total / total_rev_3y, 4) if total_rev_3y > 0 else 0.0,
+                "Brand_CAGR": round(brand_cagr, 2),
+                "Trend": trend,
             })
         brands.sort(key=lambda b: b["Market_Share"], reverse=True)
 
