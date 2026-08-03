@@ -1,14 +1,50 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from openpyxl import load_workbook
 import io
 import os
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 from collections import defaultdict
+
+DEFAULT_DATASET_PATH = os.path.join(
+    os.path.dirname(__file__), "data", "default_dataset.xlsx"
+)
+
+default_dataset_cache: Optional[Dict[str, Any]] = None
+
+
+def load_default_dataset() -> None:
+    global default_dataset_cache
+
+    if not os.path.exists(DEFAULT_DATASET_PATH):
+        default_dataset_cache = None
+        return
+
+    try:
+        with open(DEFAULT_DATASET_PATH, "rb") as f:
+            contents = f.read()
+
+        rows, molecules, products = parse_workbook(contents)
+        default_dataset_cache = build_upload_response(rows, molecules, products)
+    except Exception as e:
+        default_dataset_cache = {
+            "success": False,
+            "error": f"Failed to load default dataset: {e}",
+            "analytics": [],
+        }
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    load_default_dataset()
+    yield
+
 
 app = FastAPI(
     title="MolecuLab Analytics Backend",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan,
 )
 
 # CORS
@@ -29,6 +65,31 @@ def to_number(value):
         return float(value)
     except (ValueError, TypeError):
         return 0.0
+
+
+SECTOR_KEYS = ["HOSPITAL", "RETAIL"]
+
+
+def normalize_sector(value) -> str:
+    if not value:
+        return "UNKNOWN"
+    v = str(value).strip().upper()
+    return v if v in SECTOR_KEYS else "UNKNOWN"
+
+
+INNOVATION_KEY_MAP = {
+    "INNOVATIVE BRANDED PRODUCTS": "INNOVATIVE_BRANDED_PRODUCTS",
+    "NON ORIGINAL BRANDED PRODUCTS": "NON_ORIGINAL_BRANDED_PRODUCTS",
+    "UNBRANDED PRODUCTS": "UNBRANDED_PRODUCTS",
+}
+INNOVATION_KEYS = list(INNOVATION_KEY_MAP.values())
+
+
+def normalize_innovation(value) -> str:
+    if not value:
+        return "UNKNOWN"
+    v = str(value).strip().upper()
+    return INNOVATION_KEY_MAP.get(v, "UNKNOWN")
 
 
 def compute_analytics(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -158,33 +219,55 @@ def compute_analytics(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
                 * 100
             )
 
-        brand_revenue = defaultdict(float)
+        # Single pass over this molecule's rows: brand-level detail (per-year
+        # revenue + manufacturer/corporation), sector split, and innovation mix.
+        # All three are revenue-share breakdowns of the same 3-year total, kept
+        # consistent with Dominance_Ratio's convention.
+        brand_detail: Dict[str, Dict[str, Any]] = {}
+        sector_revenue: Dict[str, float] = defaultdict(float)
+        innovation_revenue: Dict[str, float] = defaultdict(float)
 
         for row in mol_rows:
+            r23 = to_number(row.get("MAT Q2 2023_LCD MNF"))
+            r24 = to_number(row.get("MAT Q2 2024_LCD MNF"))
+            r25 = to_number(row.get("MAT Q2 2025_LCD MNF"))
+            row_total = r23 + r24 + r25
+
+            sector_revenue[normalize_sector(row.get("Sector"))] += row_total
+            innovation_revenue[normalize_innovation(row.get("Innovation Insights"))] += row_total
+
             brand = row.get("International Product")
-
             if not brand:
                 continue
-
             brand = str(brand).strip()
-
             if not brand:
                 continue
 
-            rev = (
-                to_number(row.get("MAT Q2 2023_LCD MNF"))
-                + to_number(row.get("MAT Q2 2024_LCD MNF"))
-                + to_number(row.get("MAT Q2 2025_LCD MNF"))
+            entry = brand_detail.setdefault(
+                brand,
+                {"r23": 0.0, "r24": 0.0, "r25": 0.0, "manufacturer": None, "corporation": None},
             )
+            entry["r23"] += r23
+            entry["r24"] += r24
+            entry["r25"] += r25
 
-            brand_revenue[brand] += rev
+            if not entry["manufacturer"]:
+                m = row.get("Manufacturer")
+                if m:
+                    entry["manufacturer"] = str(m).strip()
 
-        competition_count = len(brand_revenue)
+            if not entry["corporation"]:
+                c = row.get("Corporation")
+                if c:
+                    entry["corporation"] = str(c).strip()
 
-        top_brand_rev = max(
-            brand_revenue.values(),
-            default=0.0
-        )
+        competition_count = len(brand_detail)
+
+        brand_totals = {
+            b: d["r23"] + d["r24"] + d["r25"] for b, d in brand_detail.items()
+        }
+
+        top_brand_rev = max(brand_totals.values(), default=0.0)
 
         total_rev_3y = (
             rev_2023 +
@@ -197,6 +280,30 @@ def compute_analytics(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
             if total_rev_3y > 0
             else 0.0
         )
+
+        brands = []
+        for brand, d in brand_detail.items():
+            total = brand_totals[brand]
+            brands.append({
+                "Brand": brand,
+                "Manufacturer": d["manufacturer"] or "Unknown",
+                "Corporation": d["corporation"] or "Unknown",
+                "Revenue_2023": round(d["r23"], 2),
+                "Revenue_2024": round(d["r24"], 2),
+                "Revenue_2025": round(d["r25"], 2),
+                "Market_Share": round(total / total_rev_3y, 4) if total_rev_3y > 0 else 0.0,
+            })
+        brands.sort(key=lambda b: b["Market_Share"], reverse=True)
+
+        sector_split = {
+            key: round(sector_revenue.get(key, 0.0) / total_rev_3y, 4) if total_rev_3y > 0 else 0.0
+            for key in SECTOR_KEYS + ["UNKNOWN"]
+        }
+
+        innovation_mix = {
+            key: round(innovation_revenue.get(key, 0.0) / total_rev_3y, 4) if total_rev_3y > 0 else 0.0
+            for key in INNOVATION_KEYS + ["UNKNOWN"]
+        }
 
         MONOPOLY_THRESHOLD = 0.80
 
@@ -257,17 +364,20 @@ def compute_analytics(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
             "STD_CAGR": round(std_cagr, 2),
             "Revenue_CAGR": round(rev_cagr, 2),
             "Flags": flags,
+            "Brands": brands,
+            "Sector_Split": sector_split,
+            "Innovation_Mix": innovation_mix,
         })
 
     # Create two separate analyses
-    
+
     # ANALYSIS 1: Before monopoly removal
     # Two-tier sort: molecules with Rev_2025 > 0 first (by STD_CAGR), then dead/zero at bottom
     analysis_1_growth = sorted(
         analytics,
         key=lambda x: (x["Revenue_2025"] == 0, -x["STD_CAGR"])
     )
-    
+
     # ANALYSIS 2: After monopoly removal
     # Remove monopolies and sort by Opportunity_Score
     analysis_2_revenue = [m for m in analytics if not m["Monopoly_Flag"]]
@@ -279,9 +389,104 @@ def compute_analytics(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     }
 
 
+def parse_workbook(contents: bytes):
+    wb = load_workbook(io.BytesIO(contents))
+
+    ws = wb.active
+
+    if not ws:
+        raise ValueError("No sheet found in workbook")
+
+    headers = []
+
+    for cell in ws[1]:
+        headers.append(cell.value)
+
+    rows = []
+    molecules = set()
+    products = set()
+
+    for row in ws.iter_rows(
+        min_row=2,
+        values_only=True
+    ):
+        if not any(row):
+            continue
+
+        row_dict = {}
+
+        for col_idx, header in enumerate(headers):
+            if (
+                header and
+                col_idx < len(row)
+            ):
+                row_dict[header] = row[col_idx]
+
+        rows.append(row_dict)
+
+        if (
+            "Molecule List" in row_dict and
+            row_dict["Molecule List"]
+        ):
+            molecules.add(
+                str(row_dict["Molecule List"])
+            )
+
+        if (
+            "International Product" in row_dict and
+            row_dict["International Product"]
+        ):
+            products.add(
+                str(
+                    row_dict[
+                        "International Product"
+                    ]
+                )
+            )
+
+    return rows, molecules, products
+
+
+def build_upload_response(rows, molecules, products) -> Dict[str, Any]:
+    analytics_result = compute_analytics(rows)
+
+    return {
+        "success": True,
+        "analysis_1_growth": {
+            "description": "Before monopoly removal",
+            "sort_by": "STD_CAGR (Volume Growth)",
+            "filter": "None (all products included)",
+            "results": analytics_result["analysis_1_growth"],
+            "count": len(analytics_result["analysis_1_growth"])
+        },
+        "analysis_2_revenue": {
+            "description": "After monopoly removal",
+            "sort_by": "Opportunity_Score",
+            "filter": "Excluded: monopolies (80%+ dominance)",
+            "results": analytics_result["analysis_2_revenue"],
+            "count": len(analytics_result["analysis_2_revenue"])
+        },
+        "total_rows": len(rows),
+        "unique_molecules": len(molecules),
+        "unique_products": len(products),
+    }
+
+
 @app.get("/health")
 async def health_check():
     return {"status": "ok"}
+
+
+@app.get("/default-dataset")
+async def get_default_dataset():
+    if default_dataset_cache is None:
+        return {
+            "success": False,
+            "error": "No default dataset configured on the server",
+            "analytics": [],
+        }
+
+    return default_dataset_cache
 
 
 @app.post("/upload")
@@ -291,86 +496,9 @@ async def upload_dataset(
     try:
         contents = await file.read()
 
-        wb = load_workbook(
-            io.BytesIO(contents)
-        )
+        rows, molecules, products = parse_workbook(contents)
 
-        ws = wb.active
-
-        if not ws:
-            raise ValueError(
-                "No sheet found in workbook"
-            )
-
-        headers = []
-
-        for cell in ws[1]:
-            headers.append(cell.value)
-
-        rows = []
-        molecules = set()
-        products = set()
-
-        for row in ws.iter_rows(
-            min_row=2,
-            values_only=True
-        ):
-            if not any(row):
-                continue
-
-            row_dict = {}
-
-            for col_idx, header in enumerate(headers):
-                if (
-                    header and
-                    col_idx < len(row)
-                ):
-                    row_dict[header] = row[col_idx]
-
-            rows.append(row_dict)
-
-            if (
-                "Molecule List" in row_dict and
-                row_dict["Molecule List"]
-            ):
-                molecules.add(
-                    str(row_dict["Molecule List"])
-                )
-
-            if (
-                "International Product" in row_dict and
-                row_dict["International Product"]
-            ):
-                products.add(
-                    str(
-                        row_dict[
-                            "International Product"
-                        ]
-                    )
-                )
-
-        analytics_result = compute_analytics(rows)
-
-        return {
-            "success": True,
-            "analysis_1_growth": {
-                "description": "Before monopoly removal",
-                "sort_by": "STD_CAGR (Volume Growth)",
-                "filter": "None (all products included)",
-                "results": analytics_result["analysis_1_growth"],
-                "count": len(analytics_result["analysis_1_growth"])
-            },
-            "analysis_2_revenue": {
-                "description": "After monopoly removal",
-                "sort_by": "Opportunity_Score",
-                "filter": "Excluded: monopolies (80%+ dominance)",
-                "results": analytics_result["analysis_2_revenue"],
-                "count": len(analytics_result["analysis_2_revenue"])
-            },
-            "total_rows": len(rows),
-            "unique_molecules": len(molecules),
-            "unique_products": len(products),
-        }
+        return build_upload_response(rows, molecules, products)
 
     except Exception as e:
         return {

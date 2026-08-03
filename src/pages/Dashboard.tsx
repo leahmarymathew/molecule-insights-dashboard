@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import { Trophy, Target, ShieldAlert, TrendingUp, Download } from "lucide-react";
 import * as XLSX from "xlsx";
 import type { MoleculeAnalytics, FilterParams, UploadResponse, NavSection, Analysis } from "@/types";
+import { fetchDefaultDataset } from "@/services/api";
 import { AppSidebar } from "@/components/AppSidebar";
 import { Header } from "@/components/Header";
 import { KpiCard } from "@/components/KpiCard";
@@ -9,6 +10,8 @@ import { UploadSection } from "@/components/UploadSection";
 import { FilterPanel } from "@/components/FilterPanel";
 import { ResultsTable } from "@/components/ResultsTable";
 import { OverviewCharts } from "@/components/OverviewCharts";
+import { MoleculeSearch } from "@/components/MoleculeSearch";
+import { MoleculeDetail } from "@/components/MoleculeDetail";
 
 const SIDEBAR_COLLAPSED_KEY = "moleculab.sidebarCollapsed";
 const MOBILE_BREAKPOINT = 768;
@@ -96,6 +99,8 @@ export default function Dashboard() {
     uniqueMolecules: number;
     uniqueProducts: number;
   } | null>(null);
+  const [isDefaultDataset, setIsDefaultDataset] = useState(false);
+  const [selectedMolecule, setSelectedMolecule] = useState<string | null>(null);
 
   function toggleSidebarCollapsed() {
     setSidebarCollapsed((prev) => {
@@ -113,6 +118,26 @@ export default function Dashboard() {
     }
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  // On first mount, populate the dashboard from the server's cached default
+  // dataset instead of showing an empty state. Silently falls back to the
+  // empty/upload state if no default dataset is configured on the backend.
+  useEffect(() => {
+    let cancelled = false;
+    fetchDefaultDataset()
+      .then((res) => {
+        if (cancelled || !res.success) return;
+        handleUploadComplete(res);
+        setIsDefaultDataset(true);
+      })
+      .catch(() => {
+        // No default dataset available — leave the empty/upload state as-is.
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function handleUploadComplete(res: UploadResponse) {
@@ -135,7 +160,13 @@ export default function Dashboard() {
       uniqueProducts: res.unique_products,
     });
     setFilters(DEFAULT_FILTERS);
+    setSelectedMolecule(null);
     setActiveSection("overview");
+  }
+
+  function handleManualUploadComplete(res: UploadResponse) {
+    setIsDefaultDataset(false);
+    handleUploadComplete(res);
   }
 
   // Get current analysis data
@@ -181,6 +212,16 @@ export default function Dashboard() {
     return { topOpportunity, highOpportunityCount, monopolies, avgOpportunityScore };
   }, [opportunityData, analytics]);
 
+  const moleculeNames = useMemo(
+    () => Array.from(new Set(analytics.map((m) => m.Molecule))).sort(),
+    [analytics],
+  );
+
+  const selectedMoleculeData = useMemo(
+    () => (selectedMolecule ? analytics.find((m) => m.Molecule === selectedMolecule) ?? null : null),
+    [analytics, selectedMolecule],
+  );
+
   return (
     <div className="flex h-screen bg-background overflow-hidden">
       <AppSidebar
@@ -199,9 +240,10 @@ export default function Dashboard() {
           {activeSection === "overview" && (
             <div className="p-6 space-y-6">
               <UploadSection
-                onUploadComplete={handleUploadComplete}
+                onUploadComplete={handleManualUploadComplete}
                 onLoadingChange={setUploading}
                 currentSummary={summary}
+                isDefaultDataset={isDefaultDataset}
               />
 
               {uploading && analytics.length === 0 && (
@@ -272,8 +314,21 @@ export default function Dashboard() {
           )}
 
           {/* MOLECULES */}
-          {activeSection === "molecules" && (
+          {activeSection === "molecules" && selectedMoleculeData && (
+            <div className="p-6">
+              <MoleculeDetail
+                molecule={selectedMoleculeData}
+                onBack={() => setSelectedMolecule(null)}
+              />
+            </div>
+          )}
+
+          {activeSection === "molecules" && !selectedMoleculeData && (
             <div className="p-6 space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <MoleculeSearch molecules={moleculeNames} onSelect={setSelectedMolecule} />
+              </div>
+
               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border">
                 {/* Analysis Toggle */}
                 {(analysis1Growth || analysis2Revenue) && (
@@ -338,6 +393,7 @@ export default function Dashboard() {
                 data={filtered}
                 analysisMode={activeAnalysis}
                 onResetFilters={() => setFilters(DEFAULT_FILTERS)}
+                onRowClick={(m) => setSelectedMolecule(m.Molecule)}
               />
             </div>
           )}

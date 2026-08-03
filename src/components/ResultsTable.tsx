@@ -52,7 +52,7 @@ function fmtCagr(v: number) {
   return v.toFixed(2);
 }
 
-const FLAG_STYLES: Record<string, string> = {
+export const FLAG_STYLES: Record<string, string> = {
   SINGLE_BRAND: "bg-zinc-50 text-zinc-600 border-zinc-200",
   DEAD: "bg-red-100 text-red-700 border-red-200",
   EXITING: "bg-red-50 text-red-600 border-red-200",
@@ -62,7 +62,7 @@ const FLAG_STYLES: Record<string, string> = {
   HIGH_DOMINANCE: "bg-amber-50 text-amber-700 border-amber-200",
 };
 
-const FLAG_LABELS: Record<string, string> = {
+export const FLAG_LABELS: Record<string, string> = {
   SINGLE_BRAND: "Single Brand",
   DEAD: "Dead",
   EXITING: "Exiting",
@@ -180,7 +180,7 @@ function renderCell(col: SortField | "Flags", m: MoleculeAnalytics) {
     default:
       return (
         <td key={col} className="px-4 py-2.5 text-right tabular-nums text-muted-foreground">
-          {String((m as Record<string, unknown>)[col] ?? "")}
+          {String((m as unknown as Record<string, unknown>)[col] ?? "")}
         </td>
       );
   }
@@ -195,10 +195,12 @@ export function ResultsTable({
   data,
   analysisMode,
   onResetFilters,
+  onRowClick,
 }: {
   data: MoleculeAnalytics[];
   analysisMode: "growth" | "revenue";
   onResetFilters?: () => void;
+  onRowClick?: (molecule: MoleculeAnalytics) => void;
 }) {
   const optionalColumns = ALL_COLUMNS.filter((c) => !DEFAULT_VISIBLE[analysisMode].has(c.key));
 
@@ -385,9 +387,23 @@ export function ResultsTable({
             {sorted.map((m, i) => (
               <tr
                 key={m.Molecule}
+                onClick={onRowClick ? () => onRowClick(m) : undefined}
+                tabIndex={onRowClick ? 0 : undefined}
+                role={onRowClick ? "button" : undefined}
+                onKeyDown={
+                  onRowClick
+                    ? (e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          onRowClick(m);
+                        }
+                      }
+                    : undefined
+                }
                 className={cn(
                   "border-b border-border/60 hover:bg-secondary/30 transition-colors",
                   i % 2 === 1 && "bg-secondary/15",
+                  onRowClick && "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
                 )}
               >
                 {columns.map(({ key }) => renderCell(key, m))}
