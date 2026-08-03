@@ -36,6 +36,8 @@ export interface BrandDetail {
   Brand_Opportunity_Score: number;
   /** 1-indexed rank within this molecule's brands, 1 = highest Brand_Opportunity_Score. */
   Brand_Rank: number;
+  /** Other brand names in this molecule sharing this brand's normalized manufacturer. */
+  Also_Owns: string[];
 }
 
 export interface SectorSplit {
@@ -55,6 +57,11 @@ export interface MoleculeAnalytics {
   Molecule: string;
   Opportunity_Score: number;
   Competition_Count: number;
+  /** Distinct normalized manufacturer names (distribution-channel suffix variants collapsed). */
+  Unique_Manufacturers: number;
+  Unique_Corporations: number;
+  /** True when at least one manufacturer holds multiple brands in this molecule (Unique_Manufacturers < Competition_Count). */
+  MFR_CONCENTRATED: boolean;
   Dominance_Ratio: number;
   Monopoly_Flag: boolean;
   Revenue_2023: number;
