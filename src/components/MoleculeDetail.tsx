@@ -25,6 +25,10 @@ function fmtRevenue(v: number) {
   return `$${v.toFixed(0)}`;
 }
 
+function fmtRevenueExact(v: number) {
+  return `$${Math.round(v).toLocaleString()}`;
+}
+
 function fmtUnits(v: number) {
   return Math.round(v).toLocaleString();
 }
@@ -239,7 +243,7 @@ export function MoleculeDetail({ molecule: m, onBack }: MoleculeDetailProps) {
               <Tooltip
                 contentStyle={TOOLTIP_STYLE}
                 cursor={{ fill: "var(--secondary)", opacity: 0.4 }}
-                formatter={(value: number) => [fmtRevenue(value), "Revenue"]}
+                formatter={(value: number) => [fmtRevenueExact(value), "Revenue"]}
               />
               <Bar dataKey="value" radius={[3, 3, 0, 0]} fill="var(--chart-1)" />
             </BarChart>
@@ -341,13 +345,13 @@ export function MoleculeDetail({ molecule: m, onBack }: MoleculeDetailProps) {
                     <td className="px-4 py-2.5 text-muted-foreground">{b.Manufacturer}</td>
                     <td className="px-4 py-2.5 text-muted-foreground">{b.Corporation}</td>
                     <td className="px-4 py-2.5 text-right tabular-nums text-muted-foreground">
-                      {fmtRevenue(b.Revenue_2023)}
+                      {fmtRevenueExact(b.Revenue_2023)}
                     </td>
                     <td className="px-4 py-2.5 text-right tabular-nums text-muted-foreground">
-                      {fmtRevenue(b.Revenue_2024)}
+                      {fmtRevenueExact(b.Revenue_2024)}
                     </td>
                     <td className="px-4 py-2.5 text-right tabular-nums text-muted-foreground">
-                      {fmtRevenue(b.Revenue_2025)}
+                      {fmtRevenueExact(b.Revenue_2025)}
                     </td>
                     <td className="px-4 py-2.5 text-right font-semibold tabular-nums text-foreground">
                       {(b.Market_Share * 100).toFixed(1)}%
