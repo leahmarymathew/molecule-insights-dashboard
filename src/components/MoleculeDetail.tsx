@@ -177,7 +177,7 @@ export function MoleculeDetail({ molecule: m, onBack }: MoleculeDetailProps) {
     [m],
   );
 
-  const brands = useMemo(() => [...m.Brands].sort((a, b) => b.Market_Share - a.Market_Share), [m]);
+  const brands = useMemo(() => [...m.Brands].sort((a, b) => a.Brand_Rank - b.Brand_Rank), [m]);
 
   return (
     <div className="space-y-4">
@@ -320,6 +320,12 @@ export function MoleculeDetail({ molecule: m, onBack }: MoleculeDetailProps) {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-secondary/40">
+                  <th
+                    title="Rank within this molecule's brands by Brand Opportunity Score (revenue + growth + market share, hover a score to see it)"
+                    className="whitespace-nowrap px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground underline decoration-dotted decoration-muted-foreground/50 underline-offset-4 cursor-help"
+                  >
+                    Rank
+                  </th>
                   <th className="whitespace-nowrap px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
                     Trend
                   </th>
@@ -344,7 +350,10 @@ export function MoleculeDetail({ molecule: m, onBack }: MoleculeDetailProps) {
                   <th className="whitespace-nowrap px-4 py-2.5 text-right text-xs font-medium uppercase tracking-wide text-muted-foreground">
                     Market Share
                   </th>
-                  <th className="whitespace-nowrap px-4 py-2.5 text-right text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  <th
+                    title="2023→2025 compound annual growth rate of this brand's revenue (falls back to 2024→2025 growth if 2023 revenue was 0). Shown as — when neither year has revenue to grow from."
+                    className="whitespace-nowrap px-4 py-2.5 text-right text-xs font-medium uppercase tracking-wide text-muted-foreground underline decoration-dotted decoration-muted-foreground/50 underline-offset-4 cursor-help"
+                  >
                     CAGR
                   </th>
                 </tr>
@@ -358,6 +367,12 @@ export function MoleculeDetail({ molecule: m, onBack }: MoleculeDetailProps) {
                       i % 2 === 1 && "bg-secondary/15",
                     )}
                   >
+                    <td
+                      title={`Brand Opportunity Score: ${b.Brand_Opportunity_Score.toFixed(1)}`}
+                      className="px-4 py-2.5 font-semibold tabular-nums text-foreground cursor-help"
+                    >
+                      #{b.Brand_Rank}
+                    </td>
                     <td className="px-4 py-2.5">
                       <div className="flex flex-wrap gap-1">
                         {b.Trend.map((t) => (
@@ -394,12 +409,21 @@ export function MoleculeDetail({ molecule: m, onBack }: MoleculeDetailProps) {
                       {(b.Market_Share * 100).toFixed(1)}%
                     </td>
                     <td
+                      title={
+                        b.Brand_CAGR === null
+                          ? "No revenue in either base year (2023 or 2024) to compute growth from"
+                          : undefined
+                      }
                       className={cn(
                         "px-4 py-2.5 text-right tabular-nums font-medium",
-                        b.Brand_CAGR > 0 ? "text-emerald-600" : "text-red-600",
+                        b.Brand_CAGR === null
+                          ? "text-muted-foreground/40"
+                          : b.Brand_CAGR > 0
+                            ? "text-emerald-600"
+                            : "text-red-600",
                       )}
                     >
-                      {b.Brand_CAGR.toFixed(1)}%
+                      {b.Brand_CAGR === null ? "—" : `${b.Brand_CAGR.toFixed(1)}%`}
                     </td>
                   </tr>
                 ))}

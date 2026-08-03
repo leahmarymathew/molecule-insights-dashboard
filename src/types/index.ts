@@ -20,10 +20,22 @@ export interface BrandDetail {
   Revenue_2025: number;
   /** Share (0–1) of the molecule's 3-year total revenue held by this brand. */
   Market_Share: number;
-  /** 2023->2025 two-year CAGR (%), falling back to 2024->2025 growth if 2023 revenue is 0. */
-  Brand_CAGR: number;
+  /**
+   * 2023->2025 two-year CAGR (%), falling back to 2024->2025 growth if 2023
+   * revenue is 0. Null when neither base year has revenue to grow from
+   * (undefined, not zero growth) — e.g. a brand with no 2023 or 2024 revenue.
+   */
+  Brand_CAGR: number | null;
   /** LEADING is independent and may co-occur with exactly one of the other tags. */
   Trend: BrandTrend[];
+  /**
+   * Composite score (0–100+) reusing the molecule-level Opportunity_Score
+   * shape: 40% revenue + 40% revenue-weighted growth + 20% revenue-weighted
+   * market share. Brands are ranked within their molecule by this score.
+   */
+  Brand_Opportunity_Score: number;
+  /** 1-indexed rank within this molecule's brands, 1 = highest Brand_Opportunity_Score. */
+  Brand_Rank: number;
 }
 
 export interface SectorSplit {
