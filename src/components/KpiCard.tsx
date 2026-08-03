@@ -27,8 +27,9 @@ export function KpiCard({ label, value, icon: Icon, hint, highlight }: KpiCardPr
         </div>
       </div>
       <div
+        title={value}
         className={cn(
-          "text-2xl font-bold tabular-nums",
+          "text-2xl font-bold tabular-nums truncate",
           highlight ? highlightClass[highlight] : "text-foreground",
         )}
       >
