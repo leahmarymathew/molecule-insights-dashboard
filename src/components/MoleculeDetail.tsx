@@ -273,7 +273,7 @@ export function MoleculeDetail({ molecule: m, onBack }: MoleculeDetailProps) {
           label="Revenue 2025"
           value={fmtRevenue(m.Revenue_2025)}
           icon={TrendingUp}
-          hint={`${m.Revenue_CAGR >= 0 ? "+" : ""}${m.Revenue_CAGR.toFixed(1)}% CAGR`}
+          hint={`${m.Revenue_CAGR >= 0 ? "+" : ""}${m.Revenue_CAGR.toFixed(1)}% Revenue CAGR`}
           highlight={m.Revenue_CAGR > 0 ? "green" : m.Revenue_CAGR < 0 ? "red" : undefined}
         />
       </div>
