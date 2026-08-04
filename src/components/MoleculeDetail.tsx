@@ -57,7 +57,6 @@ function sanitizeFilename(name: string) {
 function exportBrandsCsv(molecule: MoleculeAnalytics, brands: BrandDetail[]) {
   if (!brands.length) return;
   const rows = brands.map((b) => ({
-    Rank: b.Brand_Rank,
     Trend: b.Trend.join(" / "),
     Brand: b.Brand,
     Manufacturer: b.Manufacturer,
@@ -66,7 +65,7 @@ function exportBrandsCsv(molecule: MoleculeAnalytics, brands: BrandDetail[]) {
     Revenue_2024: b.Revenue_2024,
     Revenue_2025: b.Revenue_2025,
     Market_Share_Pct: +(b.Market_Share * 100).toFixed(1),
-    CAGR_Pct: b.Brand_CAGR === null ? "" : b.Brand_CAGR.toFixed(1),
+    Revenue_CAGR_Pct: b.Brand_CAGR === null ? "" : b.Brand_CAGR.toFixed(1),
     Also_Owns: b.Also_Owns.join("; "),
   }));
   const sheet = XLSX.utils.json_to_sheet(rows);
@@ -388,12 +387,9 @@ export function MoleculeDetail({ molecule: m, onBack }: MoleculeDetailProps) {
               <thead>
                 <tr className="border-b border-border bg-secondary/40">
                   <th
-                    title="Rank within this molecule's brands by Brand Opportunity Score (revenue + growth + market share, hover a score to see it)"
+                    title="Rows are sorted by Brand Opportunity Score (revenue + growth + market share), highest first"
                     className="whitespace-nowrap px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground underline decoration-dotted decoration-muted-foreground/50 underline-offset-4 cursor-help"
                   >
-                    Rank
-                  </th>
-                  <th className="whitespace-nowrap px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
                     Trend
                   </th>
                   <th className="whitespace-nowrap px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -418,10 +414,10 @@ export function MoleculeDetail({ molecule: m, onBack }: MoleculeDetailProps) {
                     Market Share
                   </th>
                   <th
-                    title="2023→2025 compound annual growth rate of this brand's revenue (falls back to 2024→2025 growth if 2023 revenue was 0). Shown as — when neither year has revenue to grow from."
+                    title="Revenue CAGR: 2023→2025 compound annual growth rate of this brand's revenue (falls back to 2024→2025 growth if 2023 revenue was 0). Shown as — when neither year has revenue to grow from."
                     className="whitespace-nowrap px-4 py-2.5 text-right text-xs font-medium uppercase tracking-wide text-muted-foreground underline decoration-dotted decoration-muted-foreground/50 underline-offset-4 cursor-help"
                   >
-                    CAGR
+                    Revenue CAGR
                   </th>
                 </tr>
               </thead>
@@ -436,11 +432,8 @@ export function MoleculeDetail({ molecule: m, onBack }: MoleculeDetailProps) {
                   >
                     <td
                       title={`Brand Opportunity Score: ${b.Brand_Opportunity_Score.toFixed(1)}`}
-                      className="px-4 py-2.5 font-semibold tabular-nums text-foreground cursor-help"
+                      className="px-4 py-2.5 cursor-help"
                     >
-                      #{b.Brand_Rank}
-                    </td>
-                    <td className="px-4 py-2.5">
                       <div className="flex flex-wrap gap-1">
                         {b.Trend.map((t) => (
                           <span
