@@ -50,7 +50,10 @@ export async function uploadFile(file: File): Promise<UploadResponse> {
 
 export async function fetchDefaultDataset(): Promise<UploadResponse> {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 30000);
+  // Render's free tier spins the backend down after ~15min idle and can take
+  // 30-50s to cold-start on the next request — give this more room than a
+  // user-initiated upload so a cold start doesn't silently fall back to empty.
+  const timeout = setTimeout(() => controller.abort(), 60000);
 
   try {
     const response = await fetch(`${API_BASE}/default-dataset`, {
